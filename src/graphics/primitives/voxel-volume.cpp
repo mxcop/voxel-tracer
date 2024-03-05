@@ -251,11 +251,12 @@ bool VoxelVolume::is_occluded(const Ray& ray, u32* steps) const {
     float3 normal = {};
     f32 t = 0.0f;
 #ifdef DEV
-    u32 j = 0;
-    u32& i = steps ? *steps : j;
+    u32 ii = 0;
+    u32& i = steps ? *steps : ii;
 #else
     u32 i = 0;
 #endif
+    u32 j = 0;
     for (i, j = 0; i < MAX_STEPS; ++i) {
         const u8* voxel = fetch_voxel(floori(pos * rlod), lod_ptr);
 

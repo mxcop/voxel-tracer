@@ -45,6 +45,10 @@
     <ClCompile Include="src\dev\gui.cpp" />
     <ClCompile Include="src\dev\dev.cpp" />
     <ClCompile Include="src\graphics\rays\frustum.cpp" />
+    <ClCompile Include="src\graphics\bvh.cpp" />
+    <ClCompile Include="src\graphics\primitives\basic\aabb.cpp" />
+    <ClCompile Include="src\graphics\primitives\basic\obb.cpp" />
+    <ClCompile Include="src\graphics\primitives\basic\sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\renderer.h" />
@@ -110,6 +114,11 @@
     <ClInclude Include="src\dev\gui.h" />
     <ClInclude Include="src\dev\dev.h" />
     <ClInclude Include="src\graphics\lighting\sample.h" />
+    <ClInclude Include="src\graphics\bvh.h" />
+    <ClInclude Include="src\graphics\primitives\basic\aabb.h" />
+    <ClInclude Include="src\graphics\primitives\basic\obb.h" />
+    <ClInclude Include="src\graphics\primitives\traceable.h" />
+    <ClInclude Include="src\graphics\primitives\basic\sphere.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

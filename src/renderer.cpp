@@ -3,7 +3,8 @@
 #include "graphics/lighting/sample.h"
 #include "graphics/tonemap.h"
 #include "dev/gui.h"
-#include <graphics/rays/frustum.h>
+#include "graphics/rays/frustum.h"
+#include "graphics/primitives/basic/sphere.h"
 
 void Renderer::init() {
     /* Try load the camera settings */
@@ -22,8 +23,38 @@ void Renderer::init() {
 
     /* Create a voxel volume */
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
-    volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
+    // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
+    constexpr u32 SIZE = 32;
+    Traceable** boxes = new Traceable* [SIZE * SIZE] {};
+    for (u32 y = 0; y < SIZE; y++) {
+        for (u32 x = 0; x < SIZE; x++) {
+            const f32 xm = x * 8, ym = 0, zm = y * 8;
+            const u32 i = (y * SIZE) + (0 * SIZE) + x;
 
+            const f32 r = RandomFloat();
+            boxes[i] = new AABB(float3(xm, ym, zm), float3(xm + 8, ym + r * 8.0f, zm + 8));
+        }
+    }
+
+    //for (u32 y = 0; y < SIZE; y++) {
+    //    for (u32 x = 0; x < SIZE; x++) {
+    //        const f32 xm = x * 8, ym = 12, zm = y * 8;
+    //        const u32 i = (y * SIZE) + (1 * SIZE * SIZE) + x;
+
+    //        const f32 r = RandomFloat();
+    //        if (r > 0.6f) {
+    //            boxes[i] = new AABB(float3(xm, ym, zm), float3(xm, ym, zm) + 1);
+    //        } else if (r > 0.3f) {
+    //            boxes[i] = new OBB(float3(xm, ym, zm), 1,
+    //                               normalize(float3(RandomFloat(), RandomFloat(), RandomFloat())),
+    //                               RandomFloat() * TWOPI);
+    //        } else {
+    //            boxes[i] = new Sphere(float3(xm, ym, zm) + 0.5f, 0.5f);
+    //        }
+    //    }
+    //}
+
+    bvh = new Bvh(SIZE * SIZE, boxes);
     // texture = new Surface("assets/very-serious-test-image.png");
 }
 
@@ -291,6 +322,46 @@ void Renderer::tick(f32 dt) {
     Timer t;
 
 #if 1
+    // #pragma omp parallel for schedule(dynamic)
+    //     for (i32 y = 0; y < WIN_HEIGHT / 12; y++) {
+    // #pragma omp parallel for schedule(dynamic)
+    //         for (i32 x = 0; x < WIN_WIDTH / 12; x++) {
+    //             const u32 xs = x * 12, ys = y * 12;
+    //             const Ray ray0 = camera.get_primary_ray(xs, ys);
+    //             const Ray ray1 = camera.get_primary_ray(xs + 11, ys);
+    //             const Ray ray2 = camera.get_primary_ray(xs, ys + 11);
+    //             const Ray ray3 = camera.get_primary_ray(xs + 11, ys + 11);
+    //             const Frustum frustum(ray0.origin, ray0.dir, ray1.dir, ray2.dir, ray3.dir,
+    //             100.0f);
+    //
+    //             if (frustum.intersect_unitcube()) {
+    //                 for (u32 i = 0; i < 12; i++) {
+    //                     for (u32 j = 0; j < 12; j++) {
+    //                         const u32 xj = j + xs, yi = i + ys;
+    //                         const Ray ray = camera.get_primary_ray(xj, yi);
+    //                         const f32 r = bvh->intersect(ray);
+    //                         const float4 dc = float4(r / 16.0f, r / 16.0f, r / 16.0f, 1.0f);
+    //                         const u32 color = RGBF32_to_RGB8(&dc);
+    //                         screen->pixels[xj + yi * WIN_WIDTH] = color;
+    //
+    //                         // screen->pixels[(j + xs) + (i + ys) * WIN_WIDTH] |= 0xFF00FF00;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+
+#pragma omp parallel for schedule(dynamic)
+    for (i32 y = 0; y < WIN_HEIGHT; ++y) {
+        for (i32 x = 0; x < WIN_WIDTH; ++x) {
+            Ray ray = camera.get_primary_ray(x, y);
+            const f32 r = bvh->intersect(ray);
+            const float4 dc = float4(r / 64.0f, r / 64.0f, r / 64.0f, 1.0f);
+            u32 color = RGBF32_to_RGB8(&dc);
+            screen->pixels[x + y * WIN_WIDTH] = color;
+        }
+    }
+#elif 1
 #pragma omp parallel for schedule(dynamic)
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
@@ -300,14 +371,14 @@ void Renderer::tick(f32 dt) {
         }
     }
 
-    //for (i32 y = 0; y < WIN_HEIGHT / 12; y++) {
-    //    for (i32 x = 0; x < WIN_WIDTH / 12; x++) {
-    //        u32 xs = x * 12, ys = y * 12;
-    //        Ray ray0 = camera.get_primary_ray(xs, ys);
-    //        Ray ray1 = camera.get_primary_ray(xs + 11, ys);
-    //        Ray ray2 = camera.get_primary_ray(xs, ys + 11);
-    //        Ray ray3 = camera.get_primary_ray(xs + 11, ys + 11);
-    //        Frustum frustum(ray0.origin, ray0.dir, ray1.dir, ray2.dir, ray3.dir, 100.0f);
+    // for (i32 y = 0; y < WIN_HEIGHT / 12; y++) {
+    //     for (i32 x = 0; x < WIN_WIDTH / 12; x++) {
+    //         u32 xs = x * 12, ys = y * 12;
+    //         Ray ray0 = camera.get_primary_ray(xs, ys);
+    //         Ray ray1 = camera.get_primary_ray(xs + 11, ys);
+    //         Ray ray2 = camera.get_primary_ray(xs, ys + 11);
+    //         Ray ray3 = camera.get_primary_ray(xs + 11, ys + 11);
+    //         Frustum frustum(ray0.origin, ray0.dir, ray1.dir, ray2.dir, ray3.dir, 100.0f);
 
     //        if (frustum.intersect_unitcube()) {
     //            for (u32 i = 0; i < 12; i++) {

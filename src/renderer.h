@@ -7,6 +7,7 @@
 #include "graphics/noise/blue.h"
 #include "graphics/skydome.h"
 #include "graphics/lighting/sphere-light.h"
+#include "graphics/bvh.h"
 
 class Renderer : public TheApp {
    public:
@@ -40,6 +41,7 @@ class Renderer : public TheApp {
     vector<LightSource> lights;
     vector<SphereLight> area_lights;
     Surface* texture = nullptr;
+    Bvh* bvh = nullptr;
 
     BlueNoise* bnoise = nullptr;
     SkyDome skydome;

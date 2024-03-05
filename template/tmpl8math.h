@@ -615,7 +615,8 @@ class mat4
 public:
 	mat4() = default;
 	__declspec(align(64)) float cell[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
-	float& operator [] ( const int idx ) { return cell[idx]; }
+    float& operator[](const int idx) { return cell[idx]; }
+    const float& operator[](const int idx) const { return cell[idx]; }
 	float operator()( const int i, const int j ) const { return cell[i * 4 + j]; }
 	float& operator()( const int i, const int j ) { return cell[i * 4 + j]; }
 	mat4& operator += ( const mat4& a )
@@ -633,6 +634,9 @@ public:
 		for (int i = 0; i < 16; i++) if (m.cell[i] != cell[i]) return false; return true;
 	}
 	float3 GetTranslation() const { return make_float3( cell[3], cell[7], cell[11] ); }
+    float4 GetColumn(const u32 i) const {
+        return make_float4(cell[i], cell[i + 4], cell[i + 8], cell[i + 12]);
+    }
 	static mat4 FromColumnMajor( const mat4& T )
 	{
 		mat4 M;
@@ -824,6 +828,14 @@ public:
 		return res * (1.f / w);
 	}
 };
+
+inline mat4 fabs(const mat4& m) {
+    mat4 r;
+    for (u32 i = 0; i < 16; i++) {
+        r[i] = fabs(m[i]);
+    }
+    return r;
+}
 
 mat4 operator * ( const mat4& a, const mat4& b );
 mat4 operator + ( const mat4& a, const mat4& b );
