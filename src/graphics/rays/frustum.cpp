@@ -96,6 +96,7 @@ bool Frustum::intersect_unitcube() const {
 
     /* Test frustum vertices vs cube planes */
     /* NOTE: this isn't very effective, only cuts out corners IF angles are grazing. */
+    /* TODO: improve accuracy of this check... */
     for (int i = 0; i < 6; ++i) {
         bool isAnyVertexInPositiveSide = false;
         for (int j = 0; j < 8; ++j) {

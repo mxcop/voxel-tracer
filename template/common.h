@@ -6,9 +6,12 @@
 #if 1
 constexpr u32 WIN_WIDTH = 1280;
 constexpr u32 WIN_HEIGHT = 720;
-#else
+#elif 0
 constexpr u32 WIN_WIDTH = 1920;
 constexpr u32 WIN_HEIGHT = 1080;
+#else 
+constexpr u32 WIN_WIDTH = 2560;
+constexpr u32 WIN_HEIGHT = 1440;
 #endif
 
 /* Inline functions */

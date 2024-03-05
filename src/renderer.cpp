@@ -96,14 +96,14 @@ void Renderer::init() {
             const u32 i = (y * SIZE) + (0 * SIZE) + x;
 
             const f32 r = RandomFloat(seed);
-            const u32 c = HSBtoRGB((RandomFloat(seed) * 2 - 1) * 360.0f, 0.9f, 0.5f);
+            const u32 c = HSBtoRGB((RandomFloat(seed) * 2 - 1) * 20.0f, 1.0f, 1.0f);
             boxes[i] = new AABB(float3(xm, ym, zm),
                                 float3(xm + 8, ym + r * 8.0f, zm + 8), RGB8_to_RGBF32(c));
         }
     }
     boxes[SIZE * SIZE] = new Sphere(float3(32 - 4, 9, 40 - 4), 2.5f);
     boxes[SIZE * SIZE + 1] = new Sphere(float3(16 - 4, 6.5f, 40 - 4), 1.5f);
-    boxes[SIZE * SIZE + 2] = new Sphere(float3(32 - 4, 6, 24 - 4), 2.0f);
+    boxes[SIZE * SIZE + 2] = new Sphere(float3(32 - 4, 8, 24 - 4), 2.0f);
 
     //for (u32 y = 0; y < SIZE; y++) {
     //    for (u32 x = 0; x < SIZE; x++) {
