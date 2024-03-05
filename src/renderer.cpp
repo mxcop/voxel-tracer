@@ -3,6 +3,7 @@
 #include "graphics/lighting/sample.h"
 #include "graphics/tonemap.h"
 #include "dev/gui.h"
+#include <graphics/rays/frustum.h>
 
 void Renderer::init() {
     /* Try load the camera settings */
@@ -298,6 +299,30 @@ void Renderer::tick(f32 dt) {
             screen->pixels[x + y * WIN_WIDTH] = color;
         }
     }
+
+    //for (i32 y = 0; y < WIN_HEIGHT / 12; y++) {
+    //    for (i32 x = 0; x < WIN_WIDTH / 12; x++) {
+    //        u32 xs = x * 12, ys = y * 12;
+    //        Ray ray0 = camera.get_primary_ray(xs, ys);
+    //        Ray ray1 = camera.get_primary_ray(xs + 11, ys);
+    //        Ray ray2 = camera.get_primary_ray(xs, ys + 11);
+    //        Ray ray3 = camera.get_primary_ray(xs + 11, ys + 11);
+    //        Frustum frustum(ray0.origin, ray0.dir, ray1.dir, ray2.dir, ray3.dir, 100.0f);
+
+    //        if (frustum.intersect_unitcube()) {
+    //            for (u32 i = 0; i < 12; i++) {
+    //                for (u32 j = 0; j < 12; j++) {
+    //                    //u32 xj = j + xs, yi = i + ys;
+    //                    //Ray ray = camera.get_primary_ray(xj, yi);
+    //                    //u32 color = trace(ray, xj, yi);
+    //                    //screen->pixels[xj + yi * WIN_WIDTH] = color;
+
+    //                    screen->pixels[(j + xs) + (i + ys) * WIN_WIDTH] |= 0xFF00FF00;
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
 #else
     // 12.6M rays/s
 #pragma omp parallel for schedule(dynamic)

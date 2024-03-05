@@ -184,6 +184,7 @@
     <ClCompile Include="src\graphics\noise\blue.cpp" />
     <ClCompile Include="src\graphics\primitives\brick-volume.cpp" />
     <ClCompile Include="src\graphics\primitives\voxel-volume.cpp" />
+    <ClCompile Include="src\graphics\rays\frustum.cpp" />
     <ClCompile Include="src\graphics\skydome.cpp" />
     <ClCompile Include="template\opencl.cpp" />
     <ClCompile Include="template\opengl.cpp" />

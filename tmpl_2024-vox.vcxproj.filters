@@ -44,6 +44,7 @@
     <ClCompile Include="src\graphics\lighting\sphere-light.cpp" />
     <ClCompile Include="src\dev\gui.cpp" />
     <ClCompile Include="src\dev\dev.cpp" />
+    <ClCompile Include="src\graphics\rays\frustum.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\renderer.h" />
