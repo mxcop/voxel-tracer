@@ -6,6 +6,69 @@
 #include "graphics/rays/frustum.h"
 #include "graphics/primitives/basic/sphere.h"
 
+u32 HSBtoRGB(f32 h, f32 s, f32 v) {
+    assert(-360 <= h && h <= 360 && "h must be within [-360; 360]");
+    assert(0 <= s && s <= 1 && "s must be within [0; 100]");
+    assert(0 <= v && v <= 1 && "v must be within [0; 100]");
+
+    // Keep h within [0; 359], s and v within [0; 1]
+    if (h >= 360) h -= 360;
+    if (h < 0) h += 360;
+
+    // Convert hsv to rgb. This algorithm is described at
+    // https://en.wikipedia.org/wiki/HSL_and_HSV#From_HSV
+    const f32 C = v * s;
+    const f32 hd = h / 60;
+    const int hi = int(hd);
+    const f32 hd_mod2 = hd - hi + hi % 2;
+    const f32 X = C * (1 - fabs(hd_mod2 - 1));
+    f32 r, g, b;
+
+    switch (hi) {
+        case 0:
+            r = C;
+            g = X;
+            b = 0;
+            break;
+        case 1:
+            r = X;
+            g = C;
+            b = 0;
+            break;
+        case 2:
+            r = 0;
+            g = C;
+            b = X;
+            break;
+        case 3:
+            r = 0;
+            g = X;
+            b = C;
+            break;
+        case 4:
+            r = X;
+            g = 0;
+            b = C;
+            break;
+        case 5:
+            r = C;
+            g = 0;
+            b = X;
+            break;
+        // This should never happen
+        default:
+            return 0;
+    }
+
+    const f32 m = v - C;
+    r += m;
+    g += m;
+    b += m;
+
+    // Scale r, g, b to [0; 255] and pack them into a number 0xRRGGBB
+    return (int(r * 255) << 16) + (int(g * 255) << 8) + int(b * 255);
+}
+
 void Renderer::init() {
     /* Try load the camera settings */
     FILE* f = fopen("camera.bin", "rb");
@@ -25,16 +88,22 @@ void Renderer::init() {
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
     // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
     constexpr u32 SIZE = 32;
-    Traceable** boxes = new Traceable* [SIZE * SIZE] {};
+    u32 seed = 47324894723;
+    Traceable** boxes = new Traceable* [SIZE * SIZE + 3] {};
     for (u32 y = 0; y < SIZE; y++) {
         for (u32 x = 0; x < SIZE; x++) {
             const f32 xm = x * 8, ym = 0, zm = y * 8;
             const u32 i = (y * SIZE) + (0 * SIZE) + x;
 
-            const f32 r = RandomFloat();
-            boxes[i] = new AABB(float3(xm, ym, zm), float3(xm + 8, ym + r * 8.0f, zm + 8));
+            const f32 r = RandomFloat(seed);
+            const u32 c = HSBtoRGB((RandomFloat(seed) * 2 - 1) * 360.0f, 0.9f, 0.5f);
+            boxes[i] = new AABB(float3(xm, ym, zm),
+                                float3(xm + 8, ym + r * 8.0f, zm + 8), RGB8_to_RGBF32(c));
         }
     }
+    boxes[SIZE * SIZE] = new Sphere(float3(32 - 4, 9, 40 - 4), 2.5f);
+    boxes[SIZE * SIZE + 1] = new Sphere(float3(16 - 4, 6.5f, 40 - 4), 1.5f);
+    boxes[SIZE * SIZE + 2] = new Sphere(float3(32 - 4, 6, 24 - 4), 2.0f);
 
     //for (u32 y = 0; y < SIZE; y++) {
     //    for (u32 x = 0; x < SIZE; x++) {
@@ -54,15 +123,16 @@ void Renderer::init() {
     //    }
     //}
 
-    bvh = new Bvh(SIZE * SIZE, boxes);
+    bvh = new Bvh(SIZE * SIZE + 3, boxes);
     // texture = new Surface("assets/very-serious-test-image.png");
 }
 
 u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
+    const Bvh* volume = this->bvh;
     HitInfo hit = volume->intersect(ray);
 
     float4 color = float4(0);
-    float3 hit_pos = ray.origin + ray.dir * hit.depth + hit.normal * 0.000001f;
+    float3 hit_pos = ray.origin + ray.dir * hit.depth/* + hit.normal * 0.001f*/;
 
     /* Reflections */
 #if 1
@@ -83,12 +153,12 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         hit.steps += steps; /* <- carry step count */
 
         /* Break if the ray missed */
-        if (hit.depth >= BIG_F32) {
+        if (hit.depth == BIG_F32) {
             break;
         }
 
         /* Update the intersection point */
-        hit_pos = ray.origin + ray.dir * hit.depth + hit.normal * 0.000001f;
+        hit_pos = ray.origin + ray.dir * hit.depth/* + hit.normal * 0.000001f*/;
     }
 #endif
 
@@ -170,7 +240,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         const float3 ambient_dir = cosineweighteddiffusereflection(hit.normal, quasi_x, quasi_y);
 
         /* Shoot the ambient ray */
-        const Ray ambient_ray = Ray(hit_pos + ambient_dir * 8.0f, -ambient_dir * 8.0f);
+        const Ray ambient_ray = Ray(hit_pos, ambient_dir);
 #ifdef DEV
         const bool in_shadow = volume->is_occluded(ambient_ray, &al_steps);
 #else
@@ -225,7 +295,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         if (incidence <= 0.0f) continue;
 
         /* Shoot shadow ray */
-        const Ray shadow_ray = Ray(hit_pos + sun_dirj * 32.0f, -sun_dirj * 32.0f);
+        const Ray shadow_ray = Ray(hit_pos, sun_dirj);
 #ifdef DEV
         const bool in_shadow = volume->is_occluded(shadow_ray, &dl_steps);
 #else
@@ -321,7 +391,7 @@ void Renderer::tick(f32 dt) {
     if (frame > 120) frame = 0;
     Timer t;
 
-#if 1
+#if 0
     // #pragma omp parallel for schedule(dynamic)
     //     for (i32 y = 0; y < WIN_HEIGHT / 12; y++) {
     // #pragma omp parallel for schedule(dynamic)
@@ -355,8 +425,27 @@ void Renderer::tick(f32 dt) {
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
             Ray ray = camera.get_primary_ray(x, y);
-            const f32 r = bvh->intersect(ray);
-            const float4 dc = float4(r / 64.0f, r / 64.0f, r / 64.0f, 1.0f);
+            const HitInfo hit = bvh->intersect(ray);
+            // const float4 dc = float4(hit.depth / 64.0f, hit.depth / 64.0f, hit.depth / 64.0f, 1.0f);
+            float4 dc;
+            switch (dev::display_mode) {
+                case dev::DM::ALBEDO:
+                    dc = hit.albedo;
+                    break;
+                case dev::DM::NORMALS:
+                    dc = float4(fmaxf(hit.normal, 0.0f), 1.0f);
+                    break;
+                case dev::DM::DEPTH:
+                    dc = float4(hit.depth / 64.0f, hit.depth / 64.0f, hit.depth / 64.0f, 1.0f);
+                    break;
+                case dev::DM::PRIMARY_STEPS:
+                    dc = float4(hit.steps / 64.0f, hit.steps / 64.0f, hit.steps / 64.0f, 1.0f);
+                    break;
+                default:
+                    dc = float4(hit.depth / 64.0f, hit.depth / 64.0f, hit.depth / 64.0f, 1.0f);
+                    break;
+            }
+
             u32 color = RGBF32_to_RGB8(&dc);
             screen->pixels[x + y * WIN_WIDTH] = color;
         }
@@ -485,7 +574,7 @@ void Renderer::MouseDown(int button) {
 #endif
 
     if (button == 0) {
-        volume->place_voxel(camera.get_primary_ray(mousePos.x, mousePos.y));
+        // volume->place_voxel(camera.get_primary_ray(mousePos.x, mousePos.y));
         reset_accu();
     }
 }

@@ -11,15 +11,21 @@ HitInfo Sphere::intersect(const Ray& ray) const {
     HitInfo hit;
 
     const float3 oc = ray.origin - pos;
-    const f32 a = dot(ray.dir, ray.dir);
-    const f32 b = 2.0 * dot(oc, ray.dir);
-    const f32 c = dot(oc, oc) - radius * radius;
-    const f32 discriminant = b * b - 4 * a * c;
+    const f32 a = sqrLength(ray.dir);
+    const f32 half_b = dot(oc, ray.dir);
+    const f32 c = sqrLength(oc) - radius * radius;
+    const f32 discriminant = half_b * half_b - a * c;
     if (discriminant < 0) {
         return hit;
     }
-    const f32 tmin = (-b - sqrt(discriminant)) / (2.0 * a);
+    const f32 tmin = (-half_b - sqrt(discriminant)) / a;
+    if (tmin < 0) {
+        return hit;
+    }
 
     hit.depth = tmin;
+    hit.albedo = float4(1, 1, 1, 0.001f);
+    const float3 p = (ray.origin + ray.dir * tmin);
+    hit.normal = normalize(p - pos);
     return hit;
 }

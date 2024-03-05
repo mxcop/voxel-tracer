@@ -2,7 +2,7 @@
 
 AABB::AABB(const f32 min, const f32 max) : min(min), max(max) {}
 
-AABB::AABB(const float3 min, const float3 max) : min(min), max(max) {}
+AABB::AABB(const float3 min, const float3 max, const float3 color) : min(min), max(max), color(color) {}
 
 void AABB::grow(const float3 p) {
     min = fminf(min, p);
@@ -42,6 +42,25 @@ HitInfo AABB::intersect(const Ray& ray) const {
     /* Get the horizontal minimum and maximum "t" */
     const f32 tmax = _mm_hmin3_ps(vmax4), tmin = _mm_hmax_ps(tmin4);
 
-    if (tmax >= tmin) hit.depth = tmin;
+    if (tmin > tmax - 0.01f) {
+        return hit;
+    }
+
+    hit.depth = tmin;
+    hit.albedo = float4(color, 0);
+    const float3 p = (ray.origin + ray.dir * (tmin + 0.01f));
+    if (fabs(p.x - min.x) < 0.01f) {
+        hit.normal = float3(-1, 0, 0);
+    } else if (fabs(p.x - max.x) < 0.01f) {
+        hit.normal = float3(1, 0, 0);
+    } else if (fabs(p.y - min.y) < 0.01f) {
+        hit.normal = float3(0, -1, 0);
+    } else if (fabs(p.y - max.y) < 0.01f) {
+        hit.normal = float3(0, 1, 0);
+    } else if (fabs(p.z - min.z) < 0.01f) {
+        hit.normal = float3(0, 0, -1);
+    } else if (fabs(p.z - max.z) < 0.01f) {
+        hit.normal = float3(0, 0, 1);
+    }
     return hit;
 }

@@ -18,10 +18,11 @@ struct AABB : public Traceable {
             f128 bmin, bmax;
         };
     };
+    float3 color = 0;
 
     AABB() = default;
     AABB(const f32 min, const f32 max);
-    AABB(const float3 min, const float3 max);
+    AABB(const float3 min, const float3 max, const float3 color = 0);
 
     /* Trace-able functions */
     AABB get_aabb() const override;

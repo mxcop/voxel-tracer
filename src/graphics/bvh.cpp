@@ -199,7 +199,8 @@ void Bvh::build(const u32 size, Traceable** new_prims) {
     subdivide(root, 0);
 }
 
-f32 Bvh::intersect(const Ray& ray) const {
+HitInfo Bvh::intersect(const Ray& ray) const {
+    HitInfo result;
     const Node *node = &nodes[root_idx], *node_stack[64];
     f32 mind = BIG_F32;
     u32 steps = 0u;
@@ -212,7 +213,10 @@ f32 Bvh::intersect(const Ray& ray) const {
                 const HitInfo hit = prim.intersect(ray);
                 steps++;
 
-                mind = fminf(hit.depth, mind);
+                if (hit.depth < mind) {
+                    mind = hit.depth;
+                    result = hit;
+                }
             }
 
             /* Decend down the stack */
@@ -249,7 +253,12 @@ f32 Bvh::intersect(const Ray& ray) const {
         }
     }
 
-    // if (mind < BIG_F32) return mind;
-    // return steps;
-    return (mind < BIG_F32) ? mind : BIG_F32;
+    result.steps = steps;
+    return result;
+}
+
+bool Bvh::is_occluded(const Ray& ray, u32* steps) const {
+    const HitInfo hit = intersect(ray);
+    *steps = hit.steps;
+    return hit.depth != BIG_F32;
 }

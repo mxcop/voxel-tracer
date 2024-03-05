@@ -66,5 +66,6 @@ class Bvh {
     f32 evaluate_sah(const Node& node, i32 axis, f32 pos) const;
     f32 find_best_split_plane(const Node& node, i32& axis, f32& pos) const;
 
-    f32 intersect(const Ray& ray) const;
+    HitInfo intersect(const Ray& ray) const;
+    bool is_occluded(const Ray& ray, u32* steps = nullptr) const;
 };

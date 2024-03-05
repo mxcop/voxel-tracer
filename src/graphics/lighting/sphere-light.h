@@ -1,5 +1,7 @@
 #pragma once
 
+class Bvh;
+
 /**
  * @brief Spherical light source, radiating light into the scene from a sphere.
  */
@@ -45,8 +47,11 @@ class SphereLight {
     SphereLight() = delete;
     SphereLight(const float3 origin, const f32 radius, const float3 color, const f32 power);
 
+    // TODO: This is terrible...
     float4 contribution(const Ray& pray, const HitInfo& phit, const float3& surface,
                         const BrickVolume* scene, const float3& noise) const;
     float4 contribution(const Ray& pray, const HitInfo& phit, const float3& surface,
                         const VoxelVolume* scene, const float3& noise) const;
+    float4 contribution(const Ray& pray, const HitInfo& phit, const float3& surface,
+                        const Bvh* scene, const float3& noise) const;
 };
