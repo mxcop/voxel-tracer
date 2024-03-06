@@ -77,19 +77,19 @@ HitInfo VoxelVolume::intersect(const Ray& ray) const {
         }
 
         /* (try) move up one level after 12 steps */
-        //if (j++ >= 12 && level < BRICK_LEVELS) {
-        //    level++, j = 0;
+        if (j++ >= 12 && level < BRICK_LEVELS) {
+            level++, j = 0;
 
-        //    /* Move up one level */
-        //    lod *= BRICK_LEVEL_MUL[level - 1], rlod *= BRICK_LEVEL_REC[level - 1];
-        //    step *= BRICK_LEVEL_MUL[level - 1], delta *= BRICK_LEVEL_MUL[level - 1];
-        //    lod_ptr = voxels[level];
+            /* Move up one level */
+            lod *= BRICK_LEVEL_MUL[level - 1], rlod *= BRICK_LEVEL_REC[level - 1];
+            step *= BRICK_LEVEL_MUL[level - 1], delta *= BRICK_LEVEL_MUL[level - 1];
+            lod_ptr = voxels[level];
 
-        //    pos =
-        //        clamp(floorf((p0 + (t + 0.001f) * extend) * rlod) * lod, float3(0), volume - 1.0f);
-        //    side = (pos + fmaxf(step, float3(0.0f)) - p0) * inv_extend;
-        //    continue;
-        //}
+            pos =
+                clamp(floorf((p0 + (t + 0.001f) * extend) * rlod) * lod, float3(0), volume - 1.0f);
+            side = (pos + fmaxf(step, float3(0.0f)) - p0) * inv_extend;
+            continue;
+        }
 
         /* Move to the next voxel */
         if (side.x < side.y) {
@@ -464,6 +464,10 @@ PacketHitInfo VoxelVolume::intersect(const RayPacket& packet) const {
     f128 tmax_y = _mm_mul_ps(_mm_add_ps(next_y, offset_y), packet.ird_y);
     f128 tmax_z = _mm_mul_ps(_mm_add_ps(next_z, offset_z), packet.ird_z);
 
+    const i128 vmmx = _mm_set1_epi32(voxel_size.x - 1);
+    const i128 vmmy = _mm_set1_epi32(voxel_size.y - 1);
+    const i128 vmmz = _mm_set1_epi32(voxel_size.z - 1);
+
     /* Mask that tracks status of the rays (done = 0xFFFFFFFF) */
     i128 status_mask = (i128&)miss_mask;
     i128 exit_mask = (i128&)miss_mask;
@@ -481,15 +485,12 @@ PacketHitInfo VoxelVolume::intersect(const RayPacket& packet) const {
 #endif
 
         /* Mark any rays outside the volume as done */
-        exit_mask = _mm_or_epi32(exit_mask, _mm_cmplt_epi32(ri.x, _mm_set1_epi32(0)));
-        exit_mask = _mm_or_epi32(exit_mask, _mm_cmplt_epi32(ri.y, _mm_set1_epi32(0)));
-        exit_mask = _mm_or_epi32(exit_mask, _mm_cmplt_epi32(ri.z, _mm_set1_epi32(0)));
-        exit_mask =
-            _mm_or_epi32(exit_mask, _mm_cmpgt_epi32(ri.x, _mm_set1_epi32(voxel_size.x - 1)));
-        exit_mask =
-            _mm_or_epi32(exit_mask, _mm_cmpgt_epi32(ri.y, _mm_set1_epi32(voxel_size.y - 1)));
-        exit_mask =
-            _mm_or_epi32(exit_mask, _mm_cmpgt_epi32(ri.z, _mm_set1_epi32(voxel_size.z - 1)));
+        exit_mask = _mm_or_epi32(exit_mask, _mm_cmplt_epi32(ri.x, _mm_setzero_si128()));
+        exit_mask = _mm_or_epi32(exit_mask, _mm_cmplt_epi32(ri.y, _mm_setzero_si128()));
+        exit_mask = _mm_or_epi32(exit_mask, _mm_cmplt_epi32(ri.z, _mm_setzero_si128()));
+        exit_mask = _mm_or_epi32(exit_mask, _mm_cmpgt_epi32(ri.x, vmmx));
+        exit_mask = _mm_or_epi32(exit_mask, _mm_cmpgt_epi32(ri.y, vmmy));
+        exit_mask = _mm_or_epi32(exit_mask, _mm_cmpgt_epi32(ri.z, vmmz));
         status_mask = _mm_or_epi32(status_mask, exit_mask);
 
         /* Early exit if all rays are done */
