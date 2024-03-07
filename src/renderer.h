@@ -8,6 +8,7 @@
 #include "graphics/skydome.h"
 #include "graphics/lighting/sphere-light.h"
 #include "graphics/bvh.h"
+#include "graphics/primitives/vv.h"
 
 class Renderer : public TheApp {
    public:
@@ -41,7 +42,9 @@ class Renderer : public TheApp {
     Surface* texture = nullptr;
 
 #if USE_BVH
+    Traceable* shapes[3];
     Bvh* bvh = nullptr;
+    OVoxelVolume* test_vv = nullptr;
 #else
     VoxelVolume* volume = nullptr;
     // BrickVolume* volume = nullptr;

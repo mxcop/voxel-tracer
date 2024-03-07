@@ -29,7 +29,7 @@ AABB OBB::get_aabb() const {
 
     /* Inspired by : <https://zeux.io/2010/10/17/aabb-from-obb-with-component-wise-abs/> */
     /* Get the transformed center and extend */
-    const float3 t_center = TransformPosition(center(), model);
+    const float3 t_center = TransformPosition(size * 0.5f, model);
     const float3 t_extent = TransformVector(extent, fabs(model));
 
     return AABB(t_center - t_extent, t_center + t_extent);

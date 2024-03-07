@@ -107,12 +107,12 @@ void Renderer::init() {
     //boxes[SIZE * SIZE + 2] = new Sphere(float3(32 - 4, 8, 24 - 4), 2.0f);
     //bvh = new Bvh(SIZE * SIZE + 3, boxes);
 
-    Traceable** shapes = new Traceable* [2] {};
-
     shapes[0] = new AABB(float3(0), float3(1), float3(1));
     shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
+    test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(64));
+    shapes[2] = test_vv;
 
-    bvh = new Bvh(2, shapes);
+    bvh = new Bvh(3, shapes);
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #endif
@@ -193,6 +193,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
             case dev::DM::ALBEDO:
                 return RGBF32_to_RGB8(&hit.albedo);
             case dev::DM::NORMALS:
+                // dc = float4(hit.normal + 1.0f * 0.5f, 1.0f);
                 dc = float4(fmaxf(hit.normal, 0.0f), 1.0f);
                 return RGBF32_to_RGB8(&dc);
             case dev::DM::DEPTH:
@@ -510,6 +511,11 @@ void Renderer::tick(f32 dt) {
     accu_len++;
 #ifdef DEV
     dev::frame_time = t.elapsed();
+#endif
+
+#if USE_BVH
+    test_vv->set_rotation(normalize(float3(1, 1, 0)), (frame * 3) * 0.0174533f);
+    bvh->build(3, shapes);
 #endif
 
     /* Update the camera */

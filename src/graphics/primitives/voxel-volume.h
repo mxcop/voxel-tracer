@@ -1,7 +1,7 @@
 #pragma once
 
 #include "graphics/rays/hit.h"
-#include "morton.h"
+#include "curves/morton.h"
 
 /* 16 voxels per unit of space */
 constexpr f32 DEFAULT_VOXEL_SCALE = 16.0f;

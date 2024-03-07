@@ -66,7 +66,8 @@ struct ALIGN( 16 ) int3
 	int3( const int a ) : x( a ), y( a ), z( a ) {}
 	int3( const int4 a ) : x( a.x ), y( a.y ), z( a.z ) {}
 	union { struct { int x, y, z; int dummy; }; int cell[4]; };
-	int& operator [] ( const int n ) { return cell[n]; }
+    int& operator[](const int n) { return cell[n]; }
+    const int& operator[](const int n) const { return cell[n]; }
 };
 struct uint3;
 struct ALIGN( 16 ) uint4
