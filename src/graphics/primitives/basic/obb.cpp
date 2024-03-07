@@ -1,16 +1,27 @@
 #include "precomp.h"
 #include "obb.h"
 
-OBB::OBB(const float3 pos, const float3 size, const float3 axis, const f32 angle) : pos(pos), size(size) {
-    /* Rotate around the center of the box */
-    model = mat4::Translate(center()) * mat4::Rotate(axis, angle) * mat4::Translate(-center());
+OBB::OBB(const float3 pos, const float3 size, const float3 axis, const f32 angle)
+    : pos(pos), size(size) {
+    set_rotation(axis, angle);
 }
 
-float3 OBB::center() const { return pos + size * 0.5f; }
+float3 OBB::center() const { return pos; }
 
 float OBB::area() const {
     const float3 e = size;
     return e.x * e.x + e.y * e.y + e.z * e.z;
+}
+
+void OBB::set_rotation(const float3& axis, const f32 angle) {
+    /* Rotate around the center of the box */
+    model = mat4::Identity();
+    model = model * mat4::Translate(pos);
+    model = model * mat4::Translate((size * 0.5f));
+    model = model * mat4::Rotate(axis, angle);
+    model = model * mat4::Translate(-(size * 0.5f));
+
+    imodel = model.Inverted();
 }
 
 AABB OBB::get_aabb() const {
@@ -36,8 +47,8 @@ HitInfo OBB::intersect(const Ray& ray) const {
         const float3 axis = float3(model.GetColumn(d));
         const f32 e = dot(axis, delta), f_inv = 1.0f / dot(ray.dir, axis);
 
-        f32 t1 = (e + pos[d]) * f_inv;
-        f32 t2 = (e + pos[d] + size[d]) * f_inv;
+        f32 t1 = (e + 0) * f_inv;
+        f32 t2 = (e + size[d]) * f_inv;
 
         /* Swap t1 & t2 so t1 is always the smallest */
         if (t1 > t2) {
@@ -53,5 +64,31 @@ HitInfo OBB::intersect(const Ray& ray) const {
     }
 
     hit.depth = tmin;
+    hit.albedo = float4(1, 1, 1, 0);
+    hit.normal = intersection_normal(ray, tmin);
     return hit;
+}
+
+float3 OBB::intersection_normal(const Ray& ray, const f32 tmin) const {
+    const float3 p = TransformPosition(ray.origin + ray.dir * tmin, imodel);
+    const float3 min = 0, max = size;
+    float3 normal = 0;
+    if (fabs(p.x - min.x) < 0.001f) {
+        normal = float3(-1, 0, 0);
+    } else if (fabs(p.x - max.x) < 0.001f) {
+        normal = float3(1, 0, 0);
+    } else if (fabs(p.y - min.y) < 0.001f) {
+        normal = float3(0, -1, 0);
+    } else if (fabs(p.y - max.y) < 0.001f) {
+        normal = float3(0, 1, 0);
+    } else if (fabs(p.z - min.z) < 0.001f) {
+        normal = float3(0, 0, -1);
+    } else if (fabs(p.z - max.z) < 0.001f) {
+        normal = float3(0, 0, 1);
+    }
+    return TransformVector(normal, model);
+}
+
+Ray OBB::world_to_local(const Ray& ray) const { 
+    return Ray(TransformPosition(ray.origin, imodel), TransformVector(ray.dir, imodel));
 }

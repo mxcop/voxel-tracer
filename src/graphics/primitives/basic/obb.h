@@ -6,8 +6,8 @@
  * @brief Oriented bounding box. (Box with rotation)
  */
 struct OBB : public Traceable {
-    /* Model matrix */
-    mat4 model;
+    /* Model matrix & inverted model matrix */
+    mat4 model, imodel;
     float3 pos = 0, size = 0;
 
     OBB() = default;
@@ -19,4 +19,11 @@ struct OBB : public Traceable {
     HitInfo intersect(const Ray& ray) const override;
 
     f32 area() const;
+    void set_rotation(const float3& axis, const f32 angle);
+
+    /* Transform a ray from world space to the OBB local space */
+    Ray world_to_local(const Ray& ray) const;
+
+   private:
+    float3 intersection_normal(const Ray& ray, const f32 tmin) const;
 };

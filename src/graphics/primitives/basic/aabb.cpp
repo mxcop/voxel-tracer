@@ -23,6 +23,24 @@ float AABB::area() const {
     return e.x * e.x + e.y * e.y + e.z * e.z;
 }
 
+float3 AABB::intersection_normal(const Ray& ray, const f32 tmin) const {
+    const float3 p = ray.origin + ray.dir * tmin;
+    if (fabs(p.x - min.x) < 0.0001f) {
+        return float3(-1, 0, 0);
+    } else if (fabs(p.x - max.x) < 0.0001f) {
+        return float3(1, 0, 0);
+    } else if (fabs(p.y - min.y) < 0.0001f) {
+        return float3(0, -1, 0);
+    } else if (fabs(p.y - max.y) < 0.0001f) {
+        return float3(0, 1, 0);
+    } else if (fabs(p.z - min.z) < 0.0001f) {
+        return float3(0, 0, -1);
+    } else if (fabs(p.z - max.z) < 0.0001f) {
+        return float3(0, 0, 1);
+    }
+    return 0;
+}
+
 AABB AABB::get_aabb() const { return *this; }
 
 HitInfo AABB::intersect(const Ray& ray) const {
@@ -48,19 +66,6 @@ HitInfo AABB::intersect(const Ray& ray) const {
 
     hit.depth = tmin;
     hit.albedo = float4(color, 0);
-    const float3 p = (ray.origin + ray.dir * (tmin + 0.01f));
-    if (fabs(p.x - min.x) < 0.01f) {
-        hit.normal = float3(-1, 0, 0);
-    } else if (fabs(p.x - max.x) < 0.01f) {
-        hit.normal = float3(1, 0, 0);
-    } else if (fabs(p.y - min.y) < 0.01f) {
-        hit.normal = float3(0, -1, 0);
-    } else if (fabs(p.y - max.y) < 0.01f) {
-        hit.normal = float3(0, 1, 0);
-    } else if (fabs(p.z - min.z) < 0.01f) {
-        hit.normal = float3(0, 0, -1);
-    } else if (fabs(p.z - max.z) < 0.01f) {
-        hit.normal = float3(0, 0, 1);
-    }
+    hit.normal = intersection_normal(ray, tmin);
     return hit;
 }

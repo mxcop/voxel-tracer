@@ -35,4 +35,7 @@ struct AABB : public Traceable {
     void grow(const float3 p);
     void grow(const AABB& aabb);
     f32 area() const;
+
+   private:
+    float3 intersection_normal(const Ray& ray, const f32 tmin) const;
 };

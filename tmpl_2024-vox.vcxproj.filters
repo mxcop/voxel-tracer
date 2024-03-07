@@ -49,6 +49,7 @@
     <ClCompile Include="src\graphics\primitives\basic\aabb.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\obb.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\sphere.cpp" />
+    <ClCompile Include="src\graphics\primitives\vv.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\renderer.h" />
@@ -100,7 +101,7 @@
     <ClInclude Include="template\types.h" />
     <ClInclude Include="src\graphics\primitives\voxel-volume.h" />
     <ClInclude Include="src\graphics\rays\hit.h" />
-    <ClInclude Include="src\morton.h" />
+    <ClInclude Include="src\curves\morton.h" />
     <ClInclude Include="src\graphics\rays\packet.h" />
     <ClInclude Include="src\simd.h" />
     <ClInclude Include="src\graphics\light.h" />
@@ -119,6 +120,8 @@
     <ClInclude Include="src\graphics\primitives\basic\obb.h" />
     <ClInclude Include="src\graphics\primitives\traceable.h" />
     <ClInclude Include="src\graphics\primitives\basic\sphere.h" />
+    <ClInclude Include="src\graphics\primitives\vv.h" />
+    <ClInclude Include="src\curves\hilbert.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

@@ -188,6 +188,7 @@
     <ClCompile Include="src\graphics\primitives\brick-volume.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\obb.cpp" />
     <ClCompile Include="src\graphics\primitives\voxel-volume.cpp" />
+    <ClCompile Include="src\graphics\primitives\vv.cpp" />
     <ClCompile Include="src\graphics\rays\frustum.cpp" />
     <ClCompile Include="src\graphics\skydome.cpp" />
     <ClCompile Include="template\opencl.cpp" />
@@ -225,6 +226,7 @@
     <ClInclude Include="src\graphics\primitives\brick-volume.h" />
     <ClInclude Include="src\graphics\primitives\basic\obb.h" />
     <ClInclude Include="src\graphics\primitives\traceable.h" />
+    <ClInclude Include="src\graphics\primitives\vv.h" />
     <ClInclude Include="src\graphics\rays\frustum.h" />
     <ClInclude Include="src\graphics\rays\hit.h" />
     <ClInclude Include="src\graphics\primitives\voxel-volume.h" />
@@ -232,7 +234,8 @@
     <ClInclude Include="src\graphics\rays\ray.h" />
     <ClInclude Include="src\graphics\skydome.h" />
     <ClInclude Include="src\graphics\tonemap.h" />
-    <ClInclude Include="src\morton.h" />
+    <ClInclude Include="src\curves\hilbert.h" />
+    <ClInclude Include="src\curves\morton.h" />
     <ClInclude Include="src\simd.h" />
     <ClInclude Include="template\common.h" />
     <ClInclude Include="template\opencl.h" />
