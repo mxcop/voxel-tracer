@@ -211,7 +211,9 @@ HitInfo Bvh::intersect(const Ray& ray) const {
             for (u32 i = 0; i < node->prim_count; ++i) {
                 const Traceable& prim = *prims[node->left_first + i];
                 const HitInfo hit = prim.intersect(ray);
-                steps++;
+
+                if (hit.steps) steps += hit.steps;
+                else steps++;
 
                 if (hit.depth < mind) {
                     mind = hit.depth;
@@ -316,7 +318,7 @@ PacketHitInfo Bvh::intersect(const RayPacket128& packet) const {
 }
 #endif
 
-bool Bvh::is_occluded(const Ray& ray, u32* steps) const {
+bool Bvh::is_occluded(const Ray& ray, const f32 tmax, u32* steps) const {
     const Node *node = &nodes[root_idx], *node_stack[64];
     for (u32 stack_ptr = 0;;) {
         /* If the current node is a leaf... */
@@ -325,9 +327,9 @@ bool Bvh::is_occluded(const Ray& ray, u32* steps) const {
             for (u32 i = 0; i < node->prim_count; ++i) {
                 const Traceable& prim = *prims[node->left_first + i];
                 const HitInfo hit = prim.intersect(ray);
-                (*steps)++;
+                if (steps) (*steps)++;
 
-                if (hit.depth != BIG_F32) {
+                if (hit.depth < tmax) {
                     return true;
                 }
             }
@@ -345,7 +347,7 @@ bool Bvh::is_occluded(const Ray& ray, u32* steps) const {
         /* This function SHOULD BE inlined, otherwise it causes cache misses for the "node_stack" */
         f32 dist1 = ray.intersect_aabb(child1->aabb_min4, child1->aabb_max4);
         f32 dist2 = ray.intersect_aabb(child2->aabb_min4, child2->aabb_max4);
-        (*steps) += 2;
+        if (steps) (*steps) += 2;
 
         /* Child to be traversed first should be the closest one */
         if (dist1 > dist2) {
@@ -354,13 +356,13 @@ bool Bvh::is_occluded(const Ray& ray, u32* steps) const {
         }
 
         /* Traverse child nodes if they were intersected */
-        if (dist1 >= BIG_F32) {
+        if (dist1 >= tmax) {
             /* Decend down the stack */
             if (stack_ptr == 0) break;
             node = node_stack[--stack_ptr];
         } else {
             node = child1;
-            if (dist2 < BIG_F32) {
+            if (dist2 < tmax) {
                 node_stack[stack_ptr++] = child2;
             }
         }

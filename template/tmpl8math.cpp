@@ -41,6 +41,7 @@ uint RandomUInt()
 // Calculate a random unsigned int and cast it to a float in the range
 // [0..1)
 float RandomFloat() { return RandomUInt() * 2.3283064365387e-10f; }
+float3 RandomFloat3() { return make_float3(RandomFloat(), RandomFloat(), RandomFloat()); }
 float Rand( float range ) { return RandomFloat() * range; }
 
 // Calculate a random number based on a specific seed
@@ -51,7 +52,10 @@ uint RandomUInt( uint& customSeed )
 	customSeed ^= customSeed << 5;
 	return customSeed;
 }
-float RandomFloat( uint& customSeed ) { return RandomUInt( customSeed ) * 2.3283064365387e-10f; }
+float RandomFloat(uint& customSeed) { return RandomUInt(customSeed) * 2.3283064365387e-10f; }
+float3 RandomFloat3(uint& customSeed) {
+    return make_float3(RandomFloat(customSeed), RandomFloat(customSeed), RandomFloat(customSeed));
+}
 
 // Perlin noise implementation - https://stackoverflow.com/questions/29711668/perlin-noise-generation
 static int numX = 512, numY = 512, numOctaves = 3, primeIndex = 0;

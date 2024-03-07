@@ -141,6 +141,8 @@ uint RandomUInt();
 uint RandomUInt( uint& seed );
 float RandomFloat();
 float RandomFloat( uint& seed );
+float3 RandomFloat3();
+float3 RandomFloat3( uint& seed );
 float Rand( float range );
 
 // math

@@ -109,7 +109,8 @@ void Renderer::init() {
 
     shapes[0] = new AABB(float3(0), float3(1), float3(1));
     shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
-    test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(64));
+    test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
+    test_vv->set_rotation(normalize(RandomFloat3()), RandomFloat() * TWOPI);
     shapes[2] = test_vv;
 
     bvh = new Bvh(3, shapes);
@@ -238,7 +239,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         /* Shoot the ambient ray */
         const Ray ambient_ray = Ray(hit_pos, ambient_dir * 16.0f);
 #ifdef DEV
-        const bool in_shadow = volume->is_occluded(ambient_ray, &al_steps);
+        const bool in_shadow = volume->is_occluded(ambient_ray, BIG_F32, &al_steps);
 #else
         const bool in_shadow = volume->is_occluded(ambient_ray);
 #endif
@@ -293,7 +294,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         /* Shoot shadow ray */
         const Ray shadow_ray = Ray(hit_pos, sun_dirj * 16.0f);
 #ifdef DEV
-        const bool in_shadow = volume->is_occluded(shadow_ray, &dl_steps);
+        const bool in_shadow = volume->is_occluded(shadow_ray, BIG_F32, &dl_steps);
 #else
         const bool in_shadow = volume->is_occluded(shadow_ray);
 #endif
@@ -514,8 +515,8 @@ void Renderer::tick(f32 dt) {
 #endif
 
 #if USE_BVH
-    test_vv->set_rotation(normalize(float3(1, 1, 0)), (frame * 3) * 0.0174533f);
-    bvh->build(3, shapes);
+    //test_vv->set_rotation(normalize(float3(1, 1, 0)), (frame * 3) * 0.0174533f);
+    //bvh->build(3, shapes);
 #endif
 
     /* Update the camera */

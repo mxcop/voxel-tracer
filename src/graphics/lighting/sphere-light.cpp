@@ -83,8 +83,8 @@ float4 SphereLight::contribution(const Ray& pray, const HitInfo& phit, const flo
     if (incidence <= 0.0f) return float4(0);
 
     /* Check if there's a clear line of sight between the surface and sample point */
-    const Ray shadow_ray = Ray(sample_point, -sample_extend);
-    const bool occluded = scene->is_occluded(shadow_ray);
+    const Ray shadow_ray = Ray(sample_point, -sample_dir);
+    const bool occluded = scene->is_occluded(shadow_ray, sample_dist - 0.01f);
     if (occluded) return float4(0);
 
     /* Adjust the samples based on their probability distribution function (PDF) */

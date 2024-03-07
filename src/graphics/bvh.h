@@ -77,5 +77,5 @@ class Bvh {
     /**
      * @brief Check if a ray hits anything in its path.
      */
-    bool is_occluded(const Ray& ray, u32* steps = nullptr) const;
+    bool is_occluded(const Ray& ray, const f32 tmax = BIG_F32, u32* steps = nullptr) const;
 };
