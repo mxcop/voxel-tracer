@@ -16,3 +16,24 @@ inline float3 aces_approx(float3 v) {
     float e = 0.14f;
     return clamp((v * (a * v + b)) / (v * (c * v + d) + e), 0.0f, 1.0f);
 }
+
+inline float3 uncharted2(float3 v) {
+    const float gamma = 2.4f;
+    float A = 0.15f;
+    float B = 0.50f;
+    float C = 0.10f;
+    float D = 0.20f;
+    float E = 0.02f;
+    float F = 0.30f;
+    float W = 11.2f;
+    float exposure = 2.0f;
+    v *= exposure;
+    v = ((v * (A * v + C * B) + D * E) / (v * (A * v + B) + D * F)) - E / F;
+    float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
+    v /= white;
+    float3 igamma = float3(1.0f / gamma);
+    v.x = powf(v.x, igamma.x);
+    v.y = powf(v.y, igamma.y);
+    v.z = powf(v.z, igamma.z);
+    return v;
+}
