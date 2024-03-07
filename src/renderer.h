@@ -35,13 +35,17 @@ class Renderer : public TheApp {
     u32 frame = 0u;
     float3 sun_dir = {-0.619501f, 0.465931f, -0.631765f};
 
-    // VoxelVolume* volume = nullptr;
-    BrickVolume* volume = nullptr;
     Camera camera;
     vector<LightSource> lights;
     vector<SphereLight> area_lights;
     Surface* texture = nullptr;
+
+#if USE_BVH
     Bvh* bvh = nullptr;
+#else
+    VoxelVolume* volume = nullptr;
+    // BrickVolume* volume = nullptr;
+#endif
 
     BlueNoise* bnoise = nullptr;
     SkyDome skydome;

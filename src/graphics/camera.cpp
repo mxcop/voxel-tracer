@@ -2,7 +2,7 @@
 
 bool Camera::update(const f32 t) {
     if (not WindowHasFocus()) return false;
-    f32 speed = 3.0f * t;
+    f32 speed = 1.5f * t;
 
     /* Determine the camera directions */
     float3 ahead = normalize(target - pos);

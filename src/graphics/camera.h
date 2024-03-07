@@ -65,7 +65,7 @@ struct Camera {
     }
 
     /* Get a new primary ray packet from a top left X and Y pixel coordinate. */
-    inline RayPacket get_primary_packet(const f32 x, const f32 y) const {
+    inline RayPacket128 get_primary_packet(const f32 x, const f32 y) const {
         /* UV coordinates */
         // const f128 xm = _mm_set_ps(x, x + 1, x, x + 1), ym = _mm_set_ps(y, y, y + 1, y + 1);
         // const f128 um = _mm_mul_ps(xm, _mm_set_ps1(1.0f / WIN_WIDTH));
@@ -91,7 +91,7 @@ struct Camera {
         /* Shared origin of all four rays */
         const f128 ro[3] = {_mm_set_ps1(pos.x), _mm_set_ps1(pos.y), _mm_set_ps1(pos.z)};
 
-        return RayPacket(ro, rd);
+        return RayPacket128(ro, rd);
     }
 
     /* Update the camera and handle inputs. */

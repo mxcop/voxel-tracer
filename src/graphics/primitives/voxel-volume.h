@@ -7,7 +7,7 @@
 constexpr f32 DEFAULT_VOXEL_SCALE = 16.0f;
 
 /* Use morton ordering for voxels (slightly faster) */
-#define USE_MORTON 1
+#define USE_MORTON 0
 /* Use the AVX2 gather instructions to load voxels (worse on my AMD CPU) */
 #define USE_AVX2_GATHER 1
 
@@ -36,6 +36,14 @@ struct VoxelVolume {
             f32 _;
         };
     };
+    /* Vertical bounding box */
+    union {
+        f128 corn[2][3];
+        struct {
+            f128 min[3];
+            f128 max[3];
+        };
+    } bbv;
     union {
         f128 vsize;
         struct {
@@ -66,6 +74,14 @@ struct VoxelVolume {
      */
     VoxelVolume(float3 pos, int3 size, f32 scale = DEFAULT_VOXEL_SCALE)
         : scale(scale), bbmin(pos), bbmax(pos + float3(size) / scale), voxel_size(size) {
+        /* Set the vertical bb */
+        bbv.min[0] = _mm_set_ps1(bbmin.x);
+        bbv.min[1] = _mm_set_ps1(bbmin.y);
+        bbv.min[2] = _mm_set_ps1(bbmin.z);
+        bbv.max[0] = _mm_set_ps1(bbmax.x);
+        bbv.max[1] = _mm_set_ps1(bbmax.y);
+        bbv.max[2] = _mm_set_ps1(bbmax.z);
+
 #if USE_MORTON
         /* Morton only works for perfect cubes */
         u32 bytes = pow(max(max(size.x, size.y), size.z), 3);
@@ -256,7 +272,7 @@ struct VoxelVolume {
     /**
      * @brief Intersect the voxel volume with a packet of 4 rays.
      */
-    PacketHitInfo intersect(const RayPacket& packet) const;
+    PacketHitInfo intersect(const RayPacket128& packet) const;
 
    private:
     /* Fast ray to aabb check, using SSE and FMA. */
@@ -292,48 +308,56 @@ struct VoxelVolume {
         tmin_out = tmin, tmax_out = tmax;
     }
 
-    /* Fast ray packet to aabb check, using SSE */
-    void ray4_vs_aabb(const RayPacket& packet, PacketHitInfo& out) const {
-        f128 tmin = _mm_setzero_ps();
-        f128 tmax = _mm_set_ps1(BIG_F32);
+    /* Fast ray packet vs AABB intersection test, using SSE, FMA */
+    inline f128 ray4_vs_aabb(const RayPacket128& packet) const {
+        f128 tmin = _mm_setzero_ps(), tmax = BIG_F128;
 
+        const float3 signs = packet.signs;
         for (u32 a = 0; a < 3; ++a) {
 #if 0
-            const f128 aabb_min = _mm_set_ps1(packet.signs[a] > 0.0f ? bbmin[a] : bbmax[a]);
-            const f128 aabb_max = _mm_set_ps1(packet.signs[a] > 0.0f ? bbmax[a] : bbmin[a]);
+            const f128 bmin = bbv.corn[signs[a] < 0][a];
+            const f128 bmax = bbv.corn[signs[a] > 0][a];
 
-            const f128 dmin = _mm_mul_ps(_mm_sub_ps(aabb_min, packet.ro[a]), packet.ird[a]);
-            const f128 dmax = _mm_mul_ps(_mm_sub_ps(aabb_max, packet.ro[a]), packet.ird[a]);
+            const f128 ord = _mm_mul_ps(packet.ro[a], packet.ird[a]);
+            const f128 dmin = _mm_fmsub_ps(bmin, packet.ird[a], ord);
+            const f128 dmax = _mm_fmsub_ps(bmax, packet.ird[a], ord);
 
-            tmin = _mm_max_ps(tmin, dmin);
-            tmax = _mm_min_ps(tmax, dmax);
+            tmin = _mm_max_ps(dmin, tmin);
+            tmax = _mm_min_ps(dmax, tmax);
 #else
+            const f128 ord = _mm_mul_ps(packet.ro[a], packet.ird[a]);
+            const f128 t1 = _mm_fmsub_ps(bbv.min[a], packet.ird[a], ord);
+            const f128 t2 = _mm_fmsub_ps(bbv.max[a], packet.ird[a], ord);
 
-            // TODO: optimize function check more...
-            const f128 t1 =
-                _mm_mul_ps(_mm_sub_ps(_mm_set_ps1(bbmin[a]), packet.ro[a]), packet.ird[a]);
-            const f128 t2 =
-                _mm_mul_ps(_mm_sub_ps(_mm_set_ps1(bbmax[a]), packet.ro[a]), packet.ird[a]);
-
-            tmin = _mm_max_ps(tmin, _mm_min_ps(t1, t2));
-            tmax = _mm_min_ps(tmax, _mm_max_ps(t1, t2));
-// tmin = _mm_min_ps(_mm_max_ps(t1, tmin), _mm_max_ps(t2, tmin));
-// tmax = _mm_max_ps(_mm_min_ps(t1, tmax), _mm_min_ps(t2, tmax));
+            tmin = _mm_min_ps(_mm_max_ps(t1, tmin), _mm_max_ps(t2, tmin));
+            tmax = _mm_max_ps(_mm_min_ps(t1, tmax), _mm_min_ps(t2, tmax));
 #endif
-
-            // float t1 = (box->min[d] - ray->origin[d]) * ray->dir_inv[d];
-            // float t2 = (box->max[d] - ray->origin[d]) * ray->dir_inv[d];
-
-            // tmin = max(tmin, min(t1, t2));
-            // tmax = min(tmax, max(t1, t2));
         }
-        // tmin = _mm_max_ps(_mm_setzero_ps(), tmin);
 
         /* Use a mask to remove non-intersections (tmin > tmax) */
         const f128 mask = _mm_cmple_ps(tmin, tmax);
-        out.depth = _mm_blendv_ps(BIG_F128, tmin, mask);
-        out.exit_t = tmax;
+        return _mm_blendv_ps(BIG_F128, tmin, mask);
     }
+
+    /* Fast ray packet vs AABB intersection test, using AVX, FMA */
+#if 0
+    inline f256 ray8_vs_aabb(const RayPacket256& packet) const {
+        f256 tmin = _mm256_setzero_ps(), tmax = BIG_F256;
+
+        for (u32 a = 0; a < 3; ++a) {
+            const f256 ord = _mm256_mul_ps(packet.ro[a], packet.ird[a]);
+            const f256 t1 = _mm256_fmsub_ps(bbv.min[a], packet.ird[a], ord);
+            const f256 t2 = _mm256_fmsub_ps(bbv.max[a], packet.ird[a], ord);
+
+            tmin = _mm256_min_ps(_mm256_max_ps(t1, tmin), _mm256_max_ps(t2, tmin));
+            tmax = _mm256_max_ps(_mm256_min_ps(t1, tmax), _mm256_min_ps(t2, tmax));
+        }
+
+        /* Use a mask to remove non-intersections (tmin > tmax) */
+        const f256 mask = _mm256_cmp_ps(tmin, tmax, _CMP_LE_OS);
+        return _mm256_blendv_ps(BIG_F256, tmin, mask);
+    }
+#endif
 
     /* Fetch a voxel from this volumes voxel data. */
     __forceinline u8 fetch_voxel(const int3& idx, u32 lod = 0) const {
@@ -356,24 +380,13 @@ struct VoxelVolume {
         return lod + i;
     }
 
-    /* Fetch a brick from this volumes brick data. */
-    //    __forceinline u8 fetch_brick(const int3& idx) const {
-    // #if USE_MORTON
-    //        const u64 i = morton_encode(idx.x, idx.y, idx.z);
-    // #else
-    //        const float3 size = voxel_size / BRICK_SIZE;
-    //        size_t i = ((size_t)idx.z * size.x * size.y) + ((size_t)idx.y * size.x) + idx.x;
-    // #endif
-    //        return bricks[0][i];
-    //    }
-
     /* Fetch 4 voxels using the indices inside an SSE register. */
     __forceinline i128 fetch_voxels(const i128 indices) const {
 #if USE_AVX2_GATHER
         return gather_voxels(indices);
 #else
-        return _mm_set_epi32(voxels[indices.m128i_u32[3]], voxels[indices.m128i_u32[2]],
-                             voxels[indices.m128i_u32[1]], voxels[indices.m128i_u32[0]]);
+        return _mm_set_epi32(voxels[0][indices.m128i_u32[3]], voxels[0][indices.m128i_u32[2]],
+                             voxels[0][indices.m128i_u32[1]], voxels[0][indices.m128i_u32[0]]);
 #endif
     }
 

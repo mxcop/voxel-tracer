@@ -186,7 +186,7 @@ void Bvh::subdivide(Bvh::Node& node, int lvl) {
 void Bvh::build(const u32 size, Traceable** new_prims) {
     prims = new_prims;
     this->size = size;
-    nodes = (Node*)_aligned_malloc(sizeof(Node) * size * 2, sizeof(Node) * 2);
+    nodes = (Node*)MALLOC64(sizeof(Node) * size * 2);
     if (!nodes) return;
 
     /* Initialize the root node */
@@ -257,8 +257,114 @@ HitInfo Bvh::intersect(const Ray& ray) const {
     return result;
 }
 
+#if 0
+PacketHitInfo Bvh::intersect(const RayPacket128& packet) const {
+    PacketHitInfo result;
+    const Node *node = &nodes[root_idx], *node_stack[64];
+    f32 mind = BIG_F32;
+    u32 steps = 0u;
+    for (u32 stack_ptr = 0;;) {
+        /* If the current node is a leaf... */
+        if (node->is_leaf()) {
+            /* Check if we hit any primitives */
+            for (u32 i = 0; i < node->prim_count; ++i) {
+                const Traceable& prim = *prims[node->left_first + i];
+                const HitInfo hit = prim.intersect(ray);
+                steps++;
+
+                if (hit.depth < mind) {
+                    mind = hit.depth;
+                    result = hit;
+                }
+            }
+
+            /* Decend down the stack */
+            if (stack_ptr == 0) break;
+            node = node_stack[--stack_ptr];
+            continue;
+        }
+
+        /* In case we're not a leaf, see if we intersect the child nodes */
+        const Node* child1 = &nodes[node->left_first];
+        const Node* child2 = &nodes[node->left_first + 1];
+
+        /* This function SHOULD BE inlined, otherwise it causes cache misses for the "node_stack" */
+        const f128 d1 = packet.intersect_aabb(child1->aabb_min, child1->aabb_max);
+        const f128 d2 = packet.intersect_aabb(child2->aabb_min, child2->aabb_max);
+        steps += 2;
+
+        /* Child to be traversed first should be the closest one */
+        const f128 cmp = _mm_cmpgt_ps(d1, d2);
+        const f128 dmin = _mm_blendv_ps(d1, d2, cmp);
+        const f128 dmax = _mm_blendv_ps(d2, d1, cmp);
+
+        /* Traverse child nodes if they were intersected */
+        if (dist1 >= BIG_F32) {
+            /* Decend down the stack */
+            if (stack_ptr == 0) break;
+            node = node_stack[--stack_ptr];
+        } else {
+            node = child1;
+            if (dist2 < BIG_F32) {
+                node_stack[stack_ptr++] = child2;
+            }
+        }
+    }
+
+    result.steps = steps;
+    return result;
+}
+#endif
+
 bool Bvh::is_occluded(const Ray& ray, u32* steps) const {
-    const HitInfo hit = intersect(ray);
-    *steps = hit.steps;
-    return hit.depth != BIG_F32;
+    const Node *node = &nodes[root_idx], *node_stack[64];
+    for (u32 stack_ptr = 0;;) {
+        /* If the current node is a leaf... */
+        if (node->is_leaf()) {
+            /* Check if we hit any primitives */
+            for (u32 i = 0; i < node->prim_count; ++i) {
+                const Traceable& prim = *prims[node->left_first + i];
+                const HitInfo hit = prim.intersect(ray);
+                (*steps)++;
+
+                if (hit.depth != BIG_F32) {
+                    return true;
+                }
+            }
+
+            /* Decend down the stack */
+            if (stack_ptr == 0) break;
+            node = node_stack[--stack_ptr];
+            continue;
+        }
+
+        /* In case we're not a leaf, see if we intersect the child nodes */
+        const Node* child1 = &nodes[node->left_first];
+        const Node* child2 = &nodes[node->left_first + 1];
+
+        /* This function SHOULD BE inlined, otherwise it causes cache misses for the "node_stack" */
+        f32 dist1 = ray.intersect_aabb(child1->aabb_min4, child1->aabb_max4);
+        f32 dist2 = ray.intersect_aabb(child2->aabb_min4, child2->aabb_max4);
+        (*steps) += 2;
+
+        /* Child to be traversed first should be the closest one */
+        if (dist1 > dist2) {
+            std::swap(dist1, dist2);
+            std::swap(child1, child2);
+        }
+
+        /* Traverse child nodes if they were intersected */
+        if (dist1 >= BIG_F32) {
+            /* Decend down the stack */
+            if (stack_ptr == 0) break;
+            node = node_stack[--stack_ptr];
+        } else {
+            node = child1;
+            if (dist2 < BIG_F32) {
+                node_stack[stack_ptr++] = child2;
+            }
+        }
+    }
+
+    return false;
 }

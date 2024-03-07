@@ -5,7 +5,7 @@
 #include "primitives/basic/obb.h"
 
 /*
- * The BVH implementation is heavily inspired by a series of articles from Jacco Bikker.
+ * The BVH implementation is inspired by a series of articles from Jacco Bikker.
  * Source: https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
  */
 
@@ -34,6 +34,7 @@ class Bvh {
 
    private:
     Node* nodes = nullptr;
+    /* Skip the second node, for better child node cache alignment */
     u16 root_idx = 0, nodes_used = 2;
     u16 size = 2;
 
@@ -66,6 +67,15 @@ class Bvh {
     f32 evaluate_sah(const Node& node, i32 axis, f32 pos) const;
     f32 find_best_split_plane(const Node& node, i32& axis, f32& pos) const;
 
+    /**
+     * @brief Intersect the BVH and return information about a potential hit.
+     */
     HitInfo intersect(const Ray& ray) const;
+
+    PacketHitInfo intersect(const RayPacket128& packet) const;
+
+    /**
+     * @brief Check if a ray hits anything in its path.
+     */
     bool is_occluded(const Ray& ray, u32* steps = nullptr) const;
 };

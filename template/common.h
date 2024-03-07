@@ -14,6 +14,9 @@ constexpr u32 WIN_WIDTH = 2560;
 constexpr u32 WIN_HEIGHT = 1440;
 #endif
 
+/* Switch between a BVH world and a voxel volume */
+#define USE_BVH 1
+
 /* Inline functions */
 static inline f32 _min(const f32 a, const f32 b) { return a < b ? a : b; };
 static inline f32 _max(const f32 a, const f32 b) { return a > b ? a : b; };

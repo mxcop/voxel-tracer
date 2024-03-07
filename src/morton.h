@@ -16,7 +16,7 @@ inline u64 morton_encode(const u32 x, const u32 y, const u32 z) {
 }
 
 /* Fast version of morton encode for SSE using BMI2 (limited to 11/10 bits per axis) */
-inline i128 morton_encode(const i128 x, const i128 y, const i128 z) {
+__forceinline i128 morton_encode(const i128 x, const i128 y, const i128 z) {
     /* Bit deposit masks */
     constexpr u64 X_MASK = 0x4924924949249249; /* 11 bits */
     constexpr u64 Y_MASK = 0x9249249292492492; /* 11 bits */

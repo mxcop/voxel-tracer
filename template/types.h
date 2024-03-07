@@ -31,3 +31,4 @@ typedef __m128 f128;
 typedef __m128i i128;
 
 const f128 BIG_F128 = _mm_set_ps1(BIG_F32);
+const f256 BIG_F256 = _mm256_set1_ps(BIG_F32);

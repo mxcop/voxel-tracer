@@ -87,7 +87,8 @@ void Renderer::init() {
     /* Create a voxel volume */
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
     // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
-    constexpr u32 SIZE = 32;
+#if USE_BVH
+    constexpr u32 SIZE = 16;
     u32 seed = 47324894723;
     Traceable** boxes = new Traceable* [SIZE * SIZE + 3] {};
     for (u32 y = 0; y < SIZE; y++) {
@@ -104,31 +105,18 @@ void Renderer::init() {
     boxes[SIZE * SIZE] = new Sphere(float3(32 - 4, 9, 40 - 4), 2.5f);
     boxes[SIZE * SIZE + 1] = new Sphere(float3(16 - 4, 6.5f, 40 - 4), 1.5f);
     boxes[SIZE * SIZE + 2] = new Sphere(float3(32 - 4, 8, 24 - 4), 2.0f);
-
-    //for (u32 y = 0; y < SIZE; y++) {
-    //    for (u32 x = 0; x < SIZE; x++) {
-    //        const f32 xm = x * 8, ym = 12, zm = y * 8;
-    //        const u32 i = (y * SIZE) + (1 * SIZE * SIZE) + x;
-
-    //        const f32 r = RandomFloat();
-    //        if (r > 0.6f) {
-    //            boxes[i] = new AABB(float3(xm, ym, zm), float3(xm, ym, zm) + 1);
-    //        } else if (r > 0.3f) {
-    //            boxes[i] = new OBB(float3(xm, ym, zm), 1,
-    //                               normalize(float3(RandomFloat(), RandomFloat(), RandomFloat())),
-    //                               RandomFloat() * TWOPI);
-    //        } else {
-    //            boxes[i] = new Sphere(float3(xm, ym, zm) + 0.5f, 0.5f);
-    //        }
-    //    }
-    //}
-
     bvh = new Bvh(SIZE * SIZE + 3, boxes);
+#else
+    volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
+#endif
+
     // texture = new Surface("assets/very-serious-test-image.png");
 }
 
 u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
+#if USE_BVH
     const Bvh* volume = this->bvh;
+#endif
     HitInfo hit = volume->intersect(ray);
 
     float4 color = float4(0);
@@ -240,7 +228,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         const float3 ambient_dir = cosineweighteddiffusereflection(hit.normal, quasi_x, quasi_y);
 
         /* Shoot the ambient ray */
-        const Ray ambient_ray = Ray(hit_pos, ambient_dir);
+        const Ray ambient_ray = Ray(hit_pos, ambient_dir * 16.0f);
 #ifdef DEV
         const bool in_shadow = volume->is_occluded(ambient_ray, &al_steps);
 #else
@@ -295,7 +283,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         if (incidence <= 0.0f) continue;
 
         /* Shoot shadow ray */
-        const Ray shadow_ray = Ray(hit_pos, sun_dirj);
+        const Ray shadow_ray = Ray(hit_pos, sun_dirj * 16.0f);
 #ifdef DEV
         const bool in_shadow = volume->is_occluded(shadow_ray, &dl_steps);
 #else
@@ -488,7 +476,7 @@ void Renderer::tick(f32 dt) {
 #pragma omp parallel for schedule(dynamic)
     for (i32 y = 0; y < WIN_HEIGHT; y += 2) {
         for (i32 x = 0; x < WIN_WIDTH; x += 2) {
-            const RayPacket packet = camera.get_primary_packet(x, y);
+            const RayPacket128 packet = camera.get_primary_packet(x, y);
             const PacketHitInfo hit = volume->intersect(packet);
 
             for (u32 v = 0; v < 2; ++v) {
@@ -563,7 +551,11 @@ void Renderer::shutdown() {
     fwrite(&camera, 1, sizeof(Camera), f);
     fclose(f);
 
+#if USE_BVH
+    delete bvh;
+#else
     delete volume;
+#endif
     delete bnoise;
 }
 
