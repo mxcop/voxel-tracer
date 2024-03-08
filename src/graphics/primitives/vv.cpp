@@ -27,6 +27,8 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vp
     brickmap = Brickmap(grid_size);
     voxels = new u8[grid_size.x * grid_size.y * grid_size.z]{};
     bb = OBB(pos, float3(grid_size) / vpu);
+    pivot = bb.size * 0.5f; /* center pivot */
+    set_rotation(0, 0);
 
     /* Format the grid */
     for (u32 z = 0; z < model->size_z; z++) {
@@ -43,7 +45,6 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vp
     /* Initialize the grid palette */
     palette = new u32[256];
     for (u32 c = 0; c < 256; ++c) palette[c] = merge_u8_u32(scene->palette.color[c]);
-    // memcpy(palette, scene->palette.color, sizeof(u32) * 256);
 }
 
 OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu)
@@ -67,6 +68,7 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 v
             }
         }
     }
+    pivot = bb.size * 0.5f; /* center pivot */
 
     /* Initialize palette to 0,1,1,1 */
     palette = new u32[256];
@@ -78,7 +80,7 @@ AABB OVoxelVolume::get_aabb() const { return bb.get_aabb(); }
 float3 OVoxelVolume::center() const { return bb.center(); }
 
 void OVoxelVolume::set_rotation(const float3& axis, const f32 angle) {
-    bb.set_rotation(axis, angle);
+    bb.set_rotation_pivot(pivot, axis, angle);
 }
 
 HitInfo OVoxelVolume::intersect(const Ray& ray) const {

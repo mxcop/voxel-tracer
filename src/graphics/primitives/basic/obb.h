@@ -20,6 +20,7 @@ struct OBB : public Traceable {
 
     f32 area() const;
     void set_rotation(const float3& axis, const f32 angle);
+    void set_rotation_pivot(const float3& pivot, const float3& axis, const f32 angle);
 
     /* Transform a ray from world space to the OBB local space */
     Ray world_to_local(const Ray& ray) const;

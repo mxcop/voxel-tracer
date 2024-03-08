@@ -24,6 +24,16 @@ void OBB::set_rotation(const float3& axis, const f32 angle) {
     imodel = model.Inverted();
 }
 
+void OBB::set_rotation_pivot(const float3& pivot, const float3& axis, const f32 angle) {
+    /* Rotate around the center of the box */
+    model = mat4::Identity();
+    model = model * mat4::Translate(pos);
+    model = model * mat4::Rotate(axis, angle);
+    model = model * mat4::Translate(-pivot);
+
+    imodel = model.Inverted();
+}
+
 AABB OBB::get_aabb() const {
     const float3 extent = size * 0.5f;
 

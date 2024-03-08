@@ -6,6 +6,7 @@
 class OVoxelVolume : public Traceable {
     /* Bounding box */
     OBB bb;
+    float3 pivot;
 
     /* 8x8x8 voxels, 512 bits, 64 bytes, 1 bit each. (solid | empty) */
     struct Brick512 {
@@ -84,6 +85,7 @@ class OVoxelVolume : public Traceable {
     float3 center() const override;
     HitInfo intersect(const Ray& ray) const override;
 
+    void set_pivot(const float3 pivot) { this->pivot = pivot; };
     void set_rotation(const float3& axis, const f32 angle);
 
     /**

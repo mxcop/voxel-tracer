@@ -88,13 +88,13 @@ void Renderer::init() {
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
     // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #if USE_BVH
-    //constexpr u32 SIZE = 16;
-    //u32 seed = 47324894723;
-    //Traceable** boxes = new Traceable* [SIZE * SIZE + 3] {};
-    //for (u32 y = 0; y < SIZE; y++) {
-    //    for (u32 x = 0; x < SIZE; x++) {
-    //        const f32 xm = x * 8, ym = 0, zm = y * 8;
-    //        const u32 i = (y * SIZE) + (0 * SIZE) + x;
+    // constexpr u32 SIZE = 16;
+    // u32 seed = 47324894723;
+    // Traceable** boxes = new Traceable* [SIZE * SIZE + 3] {};
+    // for (u32 y = 0; y < SIZE; y++) {
+    //     for (u32 x = 0; x < SIZE; x++) {
+    //         const f32 xm = x * 8, ym = 0, zm = y * 8;
+    //         const u32 i = (y * SIZE) + (0 * SIZE) + x;
 
     //        const f32 r = RandomFloat(seed);
     //        const u32 c = HSBtoRGB((RandomFloat(seed) * 2 - 1) * 20.0f, 1.0f, 1.0f);
@@ -102,18 +102,28 @@ void Renderer::init() {
     //                            float3(xm + 8, ym + r * 8.0f, zm + 8), RGB8_to_RGBF32(c));
     //    }
     //}
-    //boxes[SIZE * SIZE] = new Sphere(float3(32 - 4, 9, 40 - 4), 2.5f);
-    //boxes[SIZE * SIZE + 1] = new Sphere(float3(16 - 4, 6.5f, 40 - 4), 1.5f);
-    //boxes[SIZE * SIZE + 2] = new Sphere(float3(32 - 4, 8, 24 - 4), 2.0f);
-    //bvh = new Bvh(SIZE * SIZE + 3, boxes);
+    // boxes[SIZE * SIZE] = new Sphere(float3(32 - 4, 9, 40 - 4), 2.5f);
+    // boxes[SIZE * SIZE + 1] = new Sphere(float3(16 - 4, 6.5f, 40 - 4), 1.5f);
+    // boxes[SIZE * SIZE + 2] = new Sphere(float3(32 - 4, 8, 24 - 4), 2.0f);
+    // bvh = new Bvh(SIZE * SIZE + 3, boxes);
 
-    shapes[0] = new AABB(float3(0), float3(1), float3(1));
+    shapes[0] = new AABB(float3(-1), float3(0), float3(1));
     shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
     // test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
     test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), "assets/vox/menger.vox");
     test_vv->set_rotation(normalize(RandomFloat3()), RandomFloat() * TWOPI);
     shapes[2] = test_vv;
-    shapes[3] = new OVoxelVolume(float3(-6.0f, 2.5f, -0.5f), "assets/vox/teapot.vox");
+    // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
+    const f32 VOXEL = 1.0f / 16.0f;
+    auto arm1 = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
+    arm_vv = new OVoxelVolume(float3(-4.0f, 2.5f + VOXEL * 20.0f, -0.5f), "assets/vox/robot-arm.vox");
+    arm1->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
+    arm1->set_rotation(float3(0, 0, 1), 0.0f);
+    arm_vv->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
+    arm_vv->set_rotation(float3(0, 0, 1), 1.0f);
+    shapes[1] = arm1;
+    shapes[2] = arm_vv;
+    shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/robot-arm-base.vox");
 
     bvh = new Bvh(4, shapes);
 #else
@@ -156,7 +166,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         }
 
         /* Update the intersection point */
-        hit_pos = ray.origin + ray.dir * hit.depth/* + hit.normal * 0.000001f*/;
+        hit_pos = ray.origin + ray.dir * hit.depth /* + hit.normal * 0.000001f*/;
     }
 #endif
 
@@ -254,7 +264,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         }
     }
     /* Divide by the number of samples */
-    color += hit_color * (ambient_c * (1.0f / SAMPLES));
+    color += hit_color * (ambient_c * (1.0f / SAMPLES) * 0.4f);
 
 #ifdef DEV
     /* Handle special display modes, for debugging */
@@ -302,7 +312,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
 #endif
 
         if (not in_shadow) {
-            const float3 sun_light = float3(2.5f, 2.5f, 2.5f);
+            const float3 sun_light = float3(0.4f);
             color += hit_color * sun_light * incidence;
         }
     }
@@ -380,6 +390,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
 
     /* Update accumulator */
     accu[x + y * WIN_WIDTH] += aces_approx(color);
+    // accu[x + y * WIN_WIDTH] += uncharted2(color);
     color = accu[x + y * WIN_WIDTH] / (f32)accu_len;
 
     return RGBF32_to_RGB8(&color);
@@ -517,7 +528,7 @@ void Renderer::tick(f32 dt) {
 #endif
 
 #if USE_BVH
-    //test_vv->set_rotation(normalize(float3(1, 1, 0)), (frame * 3) * 0.0174533f);
+    // test_vv->set_rotation(normalize(float3(1, 1, 0)), (frame * 3) * 0.0174533f);
     //bvh->build(3, shapes);
 #endif
 
@@ -534,6 +545,19 @@ void Renderer::gui(f32 dt) {
     devgui_control();
 
 #ifdef DEV
+#if USE_BVH
+    const f32 VOXEL = 1.0f / 16;
+    static float3 test_pivot = float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f);
+    static f32 test_angle = 1.0f;
+    if (ImGui::DragFloat3("Pivot", &test_pivot.x, VOXEL) ||
+        ImGui::DragFloat("Angle", &test_angle, 0.0174533f)) {
+        arm_vv->set_pivot(test_pivot);
+        arm_vv->set_rotation(float3(0, 0, 1), test_angle);
+        bvh->build(4, shapes);
+        reset_accu();
+    }
+#endif
+
     /* Fast mode switch */
     static bool f_down = false;
     if (IsKeyDown(GLFW_KEY_F) && f_down == false) {
