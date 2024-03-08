@@ -82,7 +82,7 @@ void Renderer::init() {
     if (accu) memset(accu, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
 
     bnoise = new BlueNoise();
-    skydome = SkyDome("assets/kiara_1_dawn_8k.hdr");
+    skydome = SkyDome("assets/kiara_1_dawn_4k.hdr");
 
     /* Create a voxel volume */
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
@@ -109,11 +109,13 @@ void Renderer::init() {
 
     shapes[0] = new AABB(float3(0), float3(1), float3(1));
     shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
-    test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
+    // test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
+    test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), "assets/vox/menger.vox");
     test_vv->set_rotation(normalize(RandomFloat3()), RandomFloat() * TWOPI);
     shapes[2] = test_vv;
+    shapes[3] = new OVoxelVolume(float3(-6.0f, 2.5f, -0.5f), "assets/vox/teapot.vox");
 
-    bvh = new Bvh(3, shapes);
+    bvh = new Bvh(4, shapes);
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #endif

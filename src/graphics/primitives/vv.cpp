@@ -1,7 +1,50 @@
-#include "precomp.h"
 #include "vv.h"
 
+#define OGT_VOX_IMPLEMENTATION
+#include <ogt/ogt_vox.h>
+
 constexpr u32 MAX_STEPS = 256;
+
+inline u32 merge_u8_u32(ogt_vox_rgba c) { return (c.r << 16) | (c.g << 8) | c.b; }
+
+OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vpu) : vpu(vpu) {
+    /* Load the model file */
+    FILE* fp = fopen(vox_path, "rb");
+    uint32_t buffer_size = _filelength(_fileno(fp));
+    uint8_t* buffer = new uint8_t[buffer_size];
+    fread(buffer, buffer_size, 1, fp);
+    fclose(fp);
+
+    /* Parse the model file */
+    const ogt_vox_scene* scene = ogt_vox_read_scene(buffer, buffer_size);
+    delete[] buffer; /* Cleanup */
+
+    /* Ignore everything except the first model */
+    const ogt_vox_model* model = scene->models[0];
+
+    /* Initialize the volume */
+    grid_size = int3(model->size_y, model->size_z, model->size_x);
+    brickmap = Brickmap(grid_size);
+    voxels = new u8[grid_size.x * grid_size.y * grid_size.z]{};
+    bb = OBB(pos, float3(grid_size) / vpu);
+
+    /* Format the grid */
+    for (u32 z = 0; z < model->size_z; z++) {
+        for (u32 y = 0; y < model->size_y; y++) {
+            for (u32 x = 0; x < model->size_x; x++) {
+                const u32 mi = (z * model->size_y * model->size_x) + (y * model->size_x) + x;
+                // const u32 i = (x * grid_size.y * grid_size.x) + (z * grid_size.x) + y;
+
+                set_voxel(int3(y, z, x), model->voxel_data[mi]);
+            }
+        }
+    }
+
+    /* Initialize the grid palette */
+    palette = new u32[256];
+    for (u32 c = 0; c < 256; ++c) palette[c] = merge_u8_u32(scene->palette.color[c]);
+    // memcpy(palette, scene->palette.color, sizeof(u32) * 256);
+}
 
 OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu)
     : bb(OBB(pos, float3(grid_size) / vpu)),
@@ -24,6 +67,10 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 v
             }
         }
     }
+
+    /* Initialize palette to 0,1,1,1 */
+    palette = new u32[256];
+    memset(palette, 0x00FFFFFF, sizeof(u32) * 256);
 }
 
 /* Trace-able functions */
@@ -62,7 +109,8 @@ HitInfo OVoxelVolume::intersect(const Ray& ray) const {
             const Brick512* brick = get_brick(cell);
             if (brick->voxcnt > 0) {
                 const f32 brick_entry_t = hit.depth + t * rbpu;
-                const f32 dist = traverse_brick(brick, cell, grid_ray, brick_entry_t, rbpu, axis, hit);
+                const f32 dist =
+                    traverse_brick(brick, cell, grid_ray, brick_entry_t, rbpu, axis, hit);
                 if (dist != BIG_F32) {
                     hit.depth = brick_entry_t + dist;
                     if (hit.steps == 0) return hit;
@@ -132,10 +180,9 @@ f32 OVoxelVolume::traverse_brick(const Brick512* brick, const int3& pos, const R
         const u8 voxel = get_voxel(brick, cell);
         if (voxel) {
             const int3 hit_cell = (pos << 3) + cell;
-            const u32 i = (hit_cell.z * 8 * 8) + (hit_cell.y * 8) + hit_cell.x;
-            // TODO: fetch actual voxel color...
-            // voxels[i]
-            hit.albedo = RGB8_to_RGBF32(0x00FFFFFF);
+            const u32 i =
+                (hit_cell.z * grid_size.y * grid_size.x) + (hit_cell.y * grid_size.x) + hit_cell.x;
+            hit.albedo = RGB8_to_RGBF32(palette[voxels[i]]);
             return t / vpu;
         }
 

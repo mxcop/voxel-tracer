@@ -16,7 +16,7 @@ class OVoxelVolume : public Traceable {
     struct Brickmap {
         Brick512* bricks = nullptr;
         /* Brick map size in bricks. */
-        int3 size;
+        int3 size = 0;
 
         Brickmap() = default;
         explicit Brickmap(const int3& grid_size) {
@@ -28,6 +28,9 @@ class OVoxelVolume : public Traceable {
     /* Voxel material indices, 1 byte each. */
     u8* voxels = nullptr;
     int3 grid_size = 0;
+
+    /* Voxel material palette, 8 bit rgba. */
+    u32* palette = nullptr;
 
     /* Voxels per unit. */
     f32 vpu;
@@ -59,9 +62,13 @@ class OVoxelVolume : public Traceable {
 
    public:
     OVoxelVolume() = default;
+    /* Create voxel volume from a .vox file */
+    OVoxelVolume(const float3& pos, const char* vox_path, const f32 vpu = 16.0f);
+    /* Create voxel volume of certain size and fill it with noise */
     OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu = 16.0f);
     ~OVoxelVolume() {
         delete[] voxels;
+        delete[] palette;
         delete[] brickmap.bricks;
     }
 

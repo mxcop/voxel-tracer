@@ -42,7 +42,7 @@ class Renderer : public TheApp {
     Surface* texture = nullptr;
 
 #if USE_BVH
-    Traceable* shapes[3];
+    Traceable* shapes[4];
     Bvh* bvh = nullptr;
     OVoxelVolume* test_vv = nullptr;
 #else
