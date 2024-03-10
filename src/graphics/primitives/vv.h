@@ -64,9 +64,9 @@ class OVoxelVolume : public Traceable {
    public:
     OVoxelVolume() = default;
     /* Create voxel volume from a .vox file */
-    OVoxelVolume(const float3& pos, const char* vox_path, const f32 vpu = 16.0f);
+    OVoxelVolume(const float3& pos, const char* vox_path, const f32 vpu = 20.0f);
     /* Create voxel volume of certain size and fill it with noise */
-    OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu = 16.0f);
+    OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu = 20.0f);
     ~OVoxelVolume() {
         delete[] voxels;
         delete[] palette;

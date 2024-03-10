@@ -69,8 +69,8 @@ HitInfo OBB::intersect(const Ray& ray) const {
         tmin = fmaxf(t1, tmin);
         tmax = fminf(t2, tmax);
 
-        /* Early out check */
-        if (tmax < tmin) return hit;
+        /* Early out check (small value fixes strange black edges when shading) */
+        if (tmax - 0.0001f < tmin) return hit;
     }
 
     hit.depth = tmin;
@@ -99,6 +99,6 @@ float3 OBB::intersection_normal(const Ray& ray, const f32 tmin) const {
     return TransformVector(normal, model);
 }
 
-Ray OBB::world_to_local(const Ray& ray) const { 
+Ray OBB::world_to_local(const Ray& ray) const {
     return Ray(TransformPosition(ray.origin, imodel), TransformVector(ray.dir, imodel));
 }

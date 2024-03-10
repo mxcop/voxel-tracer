@@ -114,7 +114,7 @@ void Renderer::init() {
     test_vv->set_rotation(normalize(RandomFloat3()), RandomFloat() * TWOPI);
     shapes[2] = test_vv;
     // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
-    const f32 VOXEL = 1.0f / 16.0f;
+    const f32 VOXEL = 1.0f / 20.0f;
     auto arm1 = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
     arm_vv = new OVoxelVolume(float3(-4.0f, 2.5f + VOXEL * 20.0f, -0.5f), "assets/vox/robot-arm.vox");
     arm1->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
@@ -124,8 +124,14 @@ void Renderer::init() {
     shapes[1] = arm1;
     shapes[2] = arm_vv;
     shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/robot-arm-base.vox");
+    // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/crate-16.vox");
 
-    bvh = new Bvh(4, shapes);
+    shapes[4] = new OVoxelVolume(float3(-3.0f, 2.5f + VOXEL * 6, -0.5f), "assets/vox/crate-10.vox");
+    shapes[5] = new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f),
+                                 "assets/vox/crate-16h.vox");
+    shapes[6] = new OVoxelVolume(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
+
+    bvh = new Bvh(7, shapes);
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #endif
@@ -546,14 +552,14 @@ void Renderer::gui(f32 dt) {
 
 #ifdef DEV
 #if USE_BVH
-    const f32 VOXEL = 1.0f / 16;
+    const f32 VOXEL = 1.0f / 20;
     static float3 test_pivot = float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f);
     static f32 test_angle = 1.0f;
     if (ImGui::DragFloat3("Pivot", &test_pivot.x, VOXEL) ||
         ImGui::DragFloat("Angle", &test_angle, 0.0174533f)) {
         arm_vv->set_pivot(test_pivot);
         arm_vv->set_rotation(float3(0, 0, 1), test_angle);
-        bvh->build(4, shapes);
+        bvh->build(7, shapes);
         reset_accu();
     }
 #endif
