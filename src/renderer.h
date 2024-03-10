@@ -9,6 +9,7 @@
 #include "graphics/lighting/sphere-light.h"
 #include "graphics/bvh.h"
 #include "graphics/primitives/vv.h"
+#include "graphics/tonemap.h"
 
 class Renderer : public TheApp {
    public:
@@ -25,10 +26,27 @@ class Renderer : public TheApp {
     void KeyUp(int key) {}
     void KeyDown(int key) {}
 
+    /* Insert a new color into the accumulator (returns the color to display) */
+    inline float4 insert_accu(const u32 x, const u32 y, const float4& c) const {
+        return aces_approx(insert_accu_raw(x, y, c));
+    }
+
+    /* Insert a new color into the accumulator without tonemapping (returns the color to display) */
+    inline float4 insert_accu_raw(const u32 x, const u32 y, const float4& c) const {
+        const float4 new_color = c;
+        const float4 acc_color = accu[x + y * WIN_WIDTH];
+        if (acc_color.x == 0 && acc_color.y == 0 && acc_color.z == 0 && acc_color.w == 0) {
+            accu[x + y * WIN_WIDTH] = new_color;
+            return new_color;
+        }
+        const float4 color = new_color * (0.02f) + acc_color * (0.98f);
+        accu[x + y * WIN_WIDTH] = color;
+        return color;
+    }
+
     /* Reset the accumulator */
     inline void reset_accu() {
         accu_len = 1u, memset(accu, 0, (size_t)WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
-        frame = 0; /* <- reduce flickering while moving */
     };
 
     int2 mousePos;

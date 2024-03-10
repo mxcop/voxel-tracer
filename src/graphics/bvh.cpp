@@ -210,11 +210,19 @@ HitInfo Bvh::intersect(const Ray& ray) const {
             /* Check if we hit any primitives */
             for (u32 i = 0; i < node->prim_count; ++i) {
                 const Traceable& prim = *prims[node->left_first + i];
+                
+                { /* Early out check */
+                    const AABB bb = prim.get_aabb();
+                    const HitInfo bbhit = bb.intersect(ray);
+                    if (bbhit.depth >= mind) continue;
+                }
+                
                 const HitInfo hit = prim.intersect(ray);
 
                 if (hit.steps) steps += hit.steps;
                 else steps++;
 
+                /* Record a new closest hit */
                 if (hit.depth < mind) {
                     mind = hit.depth;
                     result = hit;
@@ -243,13 +251,13 @@ HitInfo Bvh::intersect(const Ray& ray) const {
         }
 
         /* Traverse child nodes if they were intersected */
-        if (dist1 >= BIG_F32) {
+        if (dist1 >= mind) {
             /* Decend down the stack */
             if (stack_ptr == 0) break;
             node = node_stack[--stack_ptr];
         } else {
             node = child1;
-            if (dist2 < BIG_F32) {
+            if (dist2 < mind) {
                 node_stack[stack_ptr++] = child2;
             }
         }
@@ -326,6 +334,7 @@ bool Bvh::is_occluded(const Ray& ray, const f32 tmax, u32* steps) const {
             /* Check if we hit any primitives */
             for (u32 i = 0; i < node->prim_count; ++i) {
                 const Traceable& prim = *prims[node->left_first + i];
+
                 const HitInfo hit = prim.intersect(ray);
                 if (steps) (*steps)++;
 

@@ -1,7 +1,6 @@
 #include <functional>
 
 #include "graphics/lighting/sample.h"
-#include "graphics/tonemap.h"
 #include "dev/gui.h"
 #include "graphics/rays/frustum.h"
 #include "graphics/primitives/basic/sphere.h"
@@ -230,9 +229,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         color = skydome.sample_dir(ray.dir);
 
         /* Update accumulator */
-        accu[x + y * WIN_WIDTH] += aces_approx(color);
-        color = accu[x + y * WIN_WIDTH] / (f32)accu_len;
-
+        color = insert_accu(x, y, color);
         return RGBF32_to_RGB8(&color);
     }
 
@@ -249,8 +246,8 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
     for (u32 i = 0; i < SAMPLES; i++) {
         /* Blue noise + R2 (cosine weighted distribution) */
         const float2 raw_noise = bnoise->sample_2d(x, y);
-        const f32 quasi_x = fmod(raw_noise.x + R2X_2D * (frame + i), 1.0f);
-        const f32 quasi_y = fmod(raw_noise.y + R2Y_2D * (frame + i), 1.0f);
+        const f32 quasi_x = fmod(raw_noise.x + R2X_2D * (f32)(frame + i), 1.0f) * 0.95f + 0.025f;
+        const f32 quasi_y = fmod(raw_noise.y + R2Y_2D * (f32)(frame + i), 1.0f) * 0.95f + 0.025f;
         // const float3 ambient_dir = sample_hemisphere_weighted(quasi_x, quasi_y, hit.normal);
         const float3 ambient_dir = cosineweighteddiffusereflection(hit.normal, quasi_x, quasi_y);
 
@@ -279,9 +276,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         dc = float4(al_steps / 64.0f, al_steps / 64.0f, al_steps / 64.0f, 1.0f);
 
         /* Update accumulator */
-        accu[x + y * WIN_WIDTH] += dc;
-        dc = accu[x + y * WIN_WIDTH] / (f32)accu_len;
-
+        dc = insert_accu_raw(x, y, dc);
         return RGBF32_to_RGB8(&dc);
     }
 #endif
@@ -330,9 +325,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         dc = float4(dl_steps / 64.0f, dl_steps / 64.0f, dl_steps / 64.0f, 1.0f);
 
         /* Update accumulator */
-        accu[x + y * WIN_WIDTH] += dc;
-        dc = accu[x + y * WIN_WIDTH] / (f32)accu_len;
-
+        dc = insert_accu_raw(x, y, dc);
         return RGBF32_to_RGB8(&dc);
     }
 #endif
@@ -395,16 +388,13 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
 #endif
 
     /* Update accumulator */
-    accu[x + y * WIN_WIDTH] += aces_approx(color);
-    // accu[x + y * WIN_WIDTH] += uncharted2(color);
-    color = accu[x + y * WIN_WIDTH] / (f32)accu_len;
-
+    color = insert_accu(x, y, color);
     return RGBF32_to_RGB8(&color);
 }
 
 void Renderer::tick(f32 dt) {
     frame++;
-    if (frame > 120) frame = 0;
+    if (frame > 240) frame = 0;
     Timer t;
 
 #if 0
@@ -540,8 +530,7 @@ void Renderer::tick(f32 dt) {
 
     /* Update the camera */
     if (camera.update(dt)) {
-        accu_len = 1u;
-        memset(accu, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+        reset_accu();
     }
 }
 

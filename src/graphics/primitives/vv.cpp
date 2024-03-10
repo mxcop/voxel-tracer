@@ -5,7 +5,8 @@
 
 constexpr u32 MAX_STEPS = 256;
 
-inline u32 merge_u8_u32(ogt_vox_rgba c) { return (c.r << 16) | (c.g << 8) | c.b; }
+/* Convert RGBA to u32 */
+static inline u32 merge_u8_u32(ogt_vox_rgba c) { return (c.r << 16) | (c.g << 8) | c.b; }
 
 OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vpu) : vpu(vpu) {
     /* Load the model file */
@@ -34,8 +35,9 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vp
     for (u32 z = 0; z < model->size_z; z++) {
         for (u32 y = 0; y < model->size_y; y++) {
             for (u32 x = 0; x < model->size_x; x++) {
-                const u32 mi = (z * model->size_y * model->size_x) + (y * model->size_x) + x;
-                // const u32 i = (x * grid_size.y * grid_size.x) + (z * grid_size.x) + y;
+                /* .vox model axis are weird... */
+                const u32 mi = (z * model->size_y * model->size_x) +
+                               ((model->size_y - y - 1) * model->size_x) + x;
 
                 set_voxel(int3(y, z, x), model->voxel_data[mi]);
             }
