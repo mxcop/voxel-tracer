@@ -81,56 +81,42 @@ void Renderer::init() {
     if (accu) memset(accu, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
 
     bnoise = new BlueNoise();
-    skydome = SkyDome("assets/kiara_1_dawn_4k.hdr");
+    skydome = SkyDome("assets/kiara_1_dawn_8k.hdr");
 
     /* Create a voxel volume */
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
     // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #if USE_BVH
-    // constexpr u32 SIZE = 16;
-    // u32 seed = 47324894723;
-    // Traceable** boxes = new Traceable* [SIZE * SIZE + 3] {};
-    // for (u32 y = 0; y < SIZE; y++) {
-    //     for (u32 x = 0; x < SIZE; x++) {
-    //         const f32 xm = x * 8, ym = 0, zm = y * 8;
-    //         const u32 i = (y * SIZE) + (0 * SIZE) + x;
-
-    //        const f32 r = RandomFloat(seed);
-    //        const u32 c = HSBtoRGB((RandomFloat(seed) * 2 - 1) * 20.0f, 1.0f, 1.0f);
-    //        boxes[i] = new AABB(float3(xm, ym, zm),
-    //                            float3(xm + 8, ym + r * 8.0f, zm + 8), RGB8_to_RGBF32(c));
-    //    }
-    //}
-    // boxes[SIZE * SIZE] = new Sphere(float3(32 - 4, 9, 40 - 4), 2.5f);
-    // boxes[SIZE * SIZE + 1] = new Sphere(float3(16 - 4, 6.5f, 40 - 4), 1.5f);
-    // boxes[SIZE * SIZE + 2] = new Sphere(float3(32 - 4, 8, 24 - 4), 2.0f);
-    // bvh = new Bvh(SIZE * SIZE + 3, boxes);
-
     shapes[0] = new AABB(float3(-1), float3(0), float3(1));
     shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
     // test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
-    test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), "assets/vox/menger.vox");
-    test_vv->set_rotation(normalize(RandomFloat3()), RandomFloat() * TWOPI);
+    test_vv = new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
+    test_vv->set_rotation(normalize(RandomFloat3()) * TWOPI);
     shapes[2] = test_vv;
     // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
     const f32 VOXEL = 1.0f / 20.0f;
     auto arm1 = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
     arm_vv = new OVoxelVolume(float3(-4.0f, 2.5f + VOXEL * 20.0f, -0.5f), "assets/vox/robot-arm.vox");
     arm1->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
-    arm1->set_rotation(float3(0, 0, 1), 0.0f);
+    arm1->set_rotation(float3(0));
     arm_vv->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
-    arm_vv->set_rotation(float3(0, 0, 1), 1.0f);
+    arm_vv->set_rotation(float3(0, 0, 1));
     shapes[1] = arm1;
-    shapes[2] = arm_vv;
+    // shapes[2] = arm_vv;
     shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/robot-arm-base.vox");
-    // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/crate-16.vox");
+     //shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/crate-16.vox");
 
     shapes[4] = new OVoxelVolume(float3(-3.0f, 2.5f + VOXEL * 6, -0.5f), "assets/vox/crate-10.vox");
     shapes[5] = new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f),
                                  "assets/vox/crate-16h.vox");
-    shapes[6] = new OVoxelVolume(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
+    //shapes[6] = new OVoxelVolume(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
+    shapes[6] = new Sphere(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), 0.5f);
 
     bvh = new Bvh(7, shapes);
+
+    /* Physics testing */
+    test_obj = world.add_object(PhyObject(float3(0, 10, 0), 0.01f));
+
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #endif
@@ -262,7 +248,8 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         if (not in_shadow) {
             /* Adjust the samples based on their probability distribution function (PDF) */
             const f32 pdf = dot(ambient_dir, hit.normal) * INVPI; /* (cos(a) / PI) */
-            const float3 sample = skydome.sample_dir(ambient_dir);
+            // const float3 sample = skydome.sample_dir(ambient_dir);
+            const float3 sample = skydome.sample_voxel_normal(hit.normal);
             ambient_c += (sample / pdf);
         }
     }
@@ -396,6 +383,13 @@ void Renderer::tick(f32 dt) {
     frame++;
     if (frame > 240) frame = 0;
     Timer t;
+
+#if USE_BVH
+    world.step(dt);
+    test_vv->set_position(test_obj->position);
+    bvh->build(7, shapes);
+    reset_accu();
+#endif
 
 #if 0
     // #pragma omp parallel for schedule(dynamic)
@@ -547,7 +541,7 @@ void Renderer::gui(f32 dt) {
     if (ImGui::DragFloat3("Pivot", &test_pivot.x, VOXEL) ||
         ImGui::DragFloat("Angle", &test_angle, 0.0174533f)) {
         arm_vv->set_pivot(test_pivot);
-        arm_vv->set_rotation(float3(0, 0, 1), test_angle);
+        arm_vv->set_rotation(float3(0, 0, test_angle));
         bvh->build(7, shapes);
         reset_accu();
     }

@@ -50,6 +50,7 @@
     <ClCompile Include="src\graphics\primitives\basic\obb.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\sphere.cpp" />
     <ClCompile Include="src\graphics\primitives\vv.cpp" />
+    <ClCompile Include="src\engine\physics\world.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\renderer.h" />
@@ -106,6 +107,7 @@
     <ClInclude Include="src\simd.h" />
     <ClInclude Include="src\graphics\light.h" />
     <ClInclude Include="src\graphics\rays\frustum.h" />
+    <ClInclude Include="lib\ogt\ogt_vox.h" />
     <ClInclude Include="src\graphics\noise\blue.h" />
     <ClInclude Include="src\graphics\skydome.h" />
     <ClInclude Include="src\graphics\primitives\brick-volume.h" />
@@ -121,7 +123,9 @@
     <ClInclude Include="src\graphics\primitives\basic\sphere.h" />
     <ClInclude Include="src\graphics\primitives\vv.h" />
     <ClInclude Include="src\curves\hilbert.h" />
-    <ClInclude Include="lib\ogt\ogt_vox.h" />
+    <ClInclude Include="src\engine\physics\object.h" />
+    <ClInclude Include="src\engine\physics\world.h" />
+    <ClInclude Include="src\engine\datastruct\pool.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

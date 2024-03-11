@@ -86,7 +86,8 @@ class OVoxelVolume : public Traceable {
     HitInfo intersect(const Ray& ray) const override;
 
     void set_pivot(const float3 pivot) { this->pivot = pivot; };
-    void set_rotation(const float3& axis, const f32 angle);
+    void set_rotation(const float3& rot);
+    void set_position(const float3& pos);
 
     /**
      * @brief Set a voxel in the volume.

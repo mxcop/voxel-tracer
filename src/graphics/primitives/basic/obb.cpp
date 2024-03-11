@@ -1,9 +1,9 @@
 #include "precomp.h"
 #include "obb.h"
 
-OBB::OBB(const float3 pos, const float3 size, const float3 axis, const f32 angle)
-    : pos(pos), size(size) {
-    set_rotation(axis, angle);
+OBB::OBB(const float3 pos, const float3 size, const float3 pivot, const float3 rot)
+    : pos(pos), pivot(pivot), rot(rot), size(size) {
+    set_rotation_pivot(pivot, rot);
 }
 
 float3 OBB::center() const { return pos; }
@@ -13,22 +13,22 @@ float OBB::area() const {
     return e.x * e.x + e.y * e.y + e.z * e.z;
 }
 
-void OBB::set_rotation(const float3& axis, const f32 angle) {
-    /* Rotate around the center of the box */
-    model = mat4::Identity();
-    model = model * mat4::Translate(pos);
-    model = model * mat4::Translate((size * 0.5f));
-    model = model * mat4::Rotate(axis, angle);
-    model = model * mat4::Translate(-(size * 0.5f));
-
-    imodel = model.Inverted();
+void OBB::set_position(const float3 position) { 
+    pos = position;
+    set_rotation_pivot(pivot, rot);
 }
 
-void OBB::set_rotation_pivot(const float3& pivot, const float3& axis, const f32 angle) {
+void OBB::set_rotation(const float3 rotation) {
+    rot = rotation;
+    set_rotation_pivot(pivot, rot);
+}
+
+void OBB::set_rotation_pivot(const float3 pivot, const float3 rotation) {
+    rot = rotation;
     /* Rotate around the center of the box */
     model = mat4::Identity();
     model = model * mat4::Translate(pos);
-    model = model * mat4::Rotate(axis, angle);
+    model = model * mat4::RotateX(rot.x) * mat4::RotateY(rot.y) * mat4::RotateZ(rot.z);
     model = model * mat4::Translate(-pivot);
 
     imodel = model.Inverted();

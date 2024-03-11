@@ -179,6 +179,7 @@
     <ClCompile Include="lib\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\dev\dev.cpp" />
     <ClCompile Include="src\dev\gui.cpp" />
+    <ClCompile Include="src\engine\physics\world.cpp" />
     <ClCompile Include="src\graphics\bvh.cpp" />
     <ClCompile Include="src\graphics\camera.cpp" />
     <ClCompile Include="src\graphics\lighting\sphere-light.cpp" />
@@ -215,6 +216,9 @@
     <ClInclude Include="lib\ogt\ogt_vox.h" />
     <ClInclude Include="src\dev\dev.h" />
     <ClInclude Include="src\dev\gui.h" />
+    <ClInclude Include="src\engine\datastruct\pool.h" />
+    <ClInclude Include="src\engine\physics\object.h" />
+    <ClInclude Include="src\engine\physics\world.h" />
     <ClInclude Include="src\graphics\bvh.h" />
     <ClInclude Include="src\graphics\camera.h" />
     <ClInclude Include="src\graphics\light.h" />

@@ -11,6 +11,8 @@
 #include "graphics/primitives/vv.h"
 #include "graphics/tonemap.h"
 
+#include "engine/physics/world.h"
+
 class Renderer : public TheApp {
    public:
     void init();
@@ -39,7 +41,7 @@ class Renderer : public TheApp {
             accu[x + y * WIN_WIDTH] = new_color;
             return new_color;
         }
-        const float4 color = new_color * (0.02f) + acc_color * (0.98f);
+        const float4 color = new_color * (0.1f) + acc_color * (0.9f);
         accu[x + y * WIN_WIDTH] = color;
         return color;
     }
@@ -47,6 +49,7 @@ class Renderer : public TheApp {
     /* Reset the accumulator */
     inline void reset_accu() {
         accu_len = 1u, memset(accu, 0, (size_t)WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+        frame = 0;
     };
 
     int2 mousePos;
@@ -77,4 +80,8 @@ class Renderer : public TheApp {
     mutable u32 accu_len = 1u;
 
     bool fast_mode = true;
+
+    /* Physics testing */
+    PhyWorld world;
+    PhyObject* test_obj = nullptr;
 };

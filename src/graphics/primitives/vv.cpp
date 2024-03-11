@@ -29,7 +29,7 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vp
     voxels = new u8[grid_size.x * grid_size.y * grid_size.z]{};
     bb = OBB(pos, float3(grid_size) / vpu);
     pivot = bb.size * 0.5f; /* center pivot */
-    set_rotation(0, 0);
+    set_rotation(0);
 
     /* Format the grid */
     for (u32 z = 0; z < model->size_z; z++) {
@@ -81,9 +81,11 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 v
 AABB OVoxelVolume::get_aabb() const { return bb.get_aabb(); }
 float3 OVoxelVolume::center() const { return bb.center(); }
 
-void OVoxelVolume::set_rotation(const float3& axis, const f32 angle) {
-    bb.set_rotation_pivot(pivot, axis, angle);
+void OVoxelVolume::set_rotation(const float3& rot) {
+    bb.set_rotation_pivot(pivot, rot);
 }
+
+void OVoxelVolume::set_position(const float3& pos) { bb.set_position(pos); }
 
 HitInfo OVoxelVolume::intersect(const Ray& ray) const {
     HitInfo hit = bb.intersect(ray);
