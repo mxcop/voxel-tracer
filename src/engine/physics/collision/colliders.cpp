@@ -5,8 +5,8 @@ float3 SphereCollider::furthest_point(const Transform& t, const float3& dir) con
     return (t.position + center) + normalize(dir) * radius;
 }
 
-float3 BoxCollider::furthest_point(const Transform& t, const float3& dir) const { 
-	float3 maxp;
+float3 BoxCollider::furthest_point(const Transform& t, const float3& dir) const {
+    float3 maxp;
     f32 maxd = -BIG_F32;
 
     for (u32 i = 0; i < 8; i++) {
@@ -23,4 +23,17 @@ float3 BoxCollider::furthest_point(const Transform& t, const float3& dir) const 
     }
 
     return maxp;
+}
+
+VoxelCollider::VoxelCollider(const int3& grid_size, const f32 vpu, const u8* voxel_data)
+    : Collider(VOXEL), size(grid_size), extend(float3(grid_size) / vpu) {
+    /* 
+     * 0 = Empty or surrounded. (never generates a contact point, and never needs to be checked)
+     * 1 = Face voxel.          (never generates a contact point)
+     * 2 = Edge voxel.          (can generate contact point, with "edge" or "corner")
+     * 3 = Corner voxel.        (can generate contact point, with "face", "edge", or "corner")
+     */
+
+    // TODO: convert "voxel_data" to a collision friendly format.
+
 }
