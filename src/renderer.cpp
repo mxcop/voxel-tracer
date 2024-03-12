@@ -87,7 +87,6 @@ void Renderer::init() {
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
     // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #if USE_BVH
-    // shapes[0] = new AABB(float3(-1), float3(0), float3(1));
     test_plane_vv = new Sphere(
         float3(0.0f, 10.0f,
                0.0f), 0.25f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
@@ -96,7 +95,7 @@ void Renderer::init() {
     // test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
     test_vv = new Sphere(
         float3(0.0f, 10.0f, 0.0f),
-        1.0f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
+        1.5f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
     // test_vv->set_rotation(normalize(RandomFloat3()) * TWOPI);
     shapes[2] = test_vv;
     // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
@@ -121,12 +120,14 @@ void Renderer::init() {
     shapes[6] =
         new OVoxelVolume(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
     // shapes[6] = new Sphere(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), 0.5f);
+    shapes[3] = new AABB(float3(-4, -1, -4), float3(4, 0, 4), float3(1));
 
     bvh = new Bvh(7, shapes);
 
     /* Physics testing */
-    test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.0f), float3(0, 10, 0.75f), 0.01f));
-    test_plane_obj = world.add_object(PhyObject(new PlaneCollider(float3(0, 1, 0), 1.0f), 0, 0));
+    test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.5f), float3(0, 10, 1.0f), 0.01f));
+    test_plane_obj =
+        world.add_object(PhyObject(new BoxCollider(float3(-4, -1, -4), float3(4, 0, 4)), 0, 0));
 
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
@@ -397,12 +398,21 @@ void Renderer::tick(f32 dt) {
 #if USE_BVH
     world.step(dt);
     Transform& transform = test_obj->transform;
+
+    static f32 time = 0;
+    time += dt;
+    if (time < 5) {
+        transform.position.y = 5.0f;
+        test_obj->velocity = 0;
+    }
+
     if (transform.position.y < -10.0f) {
         transform.position.y = 5.0f;
         test_obj->velocity = 0;
     }
     test_vv->pos = transform.position;
     test_plane_vv->pos = test_plane_obj->transform.position;
+    
     // test_plane_vv->set_position(test_plane_obj->transform.position);
     // test_vv->set_position(transform.position);
     bvh->build(7, shapes);

@@ -41,14 +41,18 @@ CollisionPoints ct_sphere_vs_sphere(const Collider* a, const Transform* ta, cons
 CollisionPoints ct_plane_vs_sphere(const Collider* a, const Transform* ta, const Collider* b,
                                    const Transform* tb);
 
+CollisionPoints ct_box_vs_sphere(const Collider* a, const Transform* ta, const Collider* b,
+                                 const Transform* tb);
+
 /* Function ptr */
 using FindContactFunc = CollisionPoints (*)(const Collider*, const Transform*, const Collider*,
                                             const Transform*);
 
-const FindContactFunc func_table[2][2] = {
-    /* Sphere           , Plane            */
-    {ct_sphere_vs_sphere, ct_plane_vs_sphere}, /* Sphere */
-    {nullptr, nullptr}                         /* Plane */
+const FindContactFunc func_table[3][3] = {
+    /* Plane, Sphere, Box */
+    {nullptr, nullptr, nullptr},                                 /* Plane */
+    {ct_sphere_vs_sphere, ct_plane_vs_sphere, ct_box_vs_sphere}, /* Sphere */
+    {nullptr, nullptr, nullptr}                                  /* Box */
 };
 
 inline CollisionPoints collision_test(const Collider* a, const Transform* at, const Collider* b,

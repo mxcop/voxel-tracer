@@ -42,23 +42,26 @@ void PhyWorld::resolve(const f32 dt) {
 
     for (Collision& c : c_buffer) {
         /* Testing collision! */
-        /*if (c.a->mass) {
-            c.a->transform.position.y = 10.0f;
-        }
-        if (c.b->mass) {
-            c.b->transform.position.y = 10.0f;
-        }*/
+        //if (c.a->mass) {
+        //    c.a->transform.position.y = 10.0f;
+        //}
+        //if (c.b->mass) {
+        //    c.b->transform.position.y = 10.0f;
+        //}
         PhyObject* a_body = c.a;
         PhyObject* b_body = c.b;
 
-        const f32 a_static = (int)(a_body->mass == 0);
-        const f32 b_static = (int)(b_body->mass == 0);
+        //a_body->velocity = 0;
+        //b_body->velocity = 0;
 
-        const float3 resolution =
-            c.points.normal * c.points.dist / fmaxf(1, a_static + b_static);
+        //const f32 a_static = (int)(a_body->mass == 0);
+        //const f32 b_static = (int)(b_body->mass == 0);
 
-        a_body->transform.position += resolution * (1.0f - a_static);
-        b_body->transform.position -= resolution * (1.0f - b_static);
+        //const float3 resolution =
+        //    c.points.normal * c.points.dist / fmaxf(1, a_static + b_static);
+
+        //a_body->transform.position += resolution * (1.0f - a_static);
+        //b_body->transform.position -= resolution * (1.0f - b_static);
 
         a_body->velocity = 0;
         b_body->velocity = 0;

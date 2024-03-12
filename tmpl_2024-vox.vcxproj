@@ -179,7 +179,9 @@
     <ClCompile Include="lib\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\dev\dev.cpp" />
     <ClCompile Include="src\dev\gui.cpp" />
+    <ClCompile Include="src\engine\physics\collision\colliders.cpp" />
     <ClCompile Include="src\engine\physics\collision\collision.cpp" />
+    <ClCompile Include="src\engine\physics\collision\gjk.cpp" />
     <ClCompile Include="src\engine\physics\world.cpp" />
     <ClCompile Include="src\graphics\bvh.cpp" />
     <ClCompile Include="src\graphics\camera.cpp" />
@@ -220,6 +222,8 @@
     <ClInclude Include="src\engine\datastruct\pool.h" />
     <ClInclude Include="src\engine\physics\collision\colliders.h" />
     <ClInclude Include="src\engine\physics\collision\collision.h" />
+    <ClInclude Include="src\engine\physics\collision\gjk.h" />
+    <ClInclude Include="src\engine\physics\collision\simplex.h" />
     <ClInclude Include="src\engine\physics\object.h" />
     <ClInclude Include="src\engine\physics\transform.h" />
     <ClInclude Include="src\engine\physics\world.h" />

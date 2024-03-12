@@ -1,5 +1,6 @@
-#include "precomp.h"
 #include "collision.h"
+
+#include "gjk.h"
 
 CollisionPoints::CollisionPoints(const float3& a, const float3& b) : a(a), b(b) {
     const float3 extend = b - a;
@@ -52,11 +53,10 @@ CollisionPoints ct_plane_vs_sphere(const Collider* a, const Transform* ta, const
     const f32 b_radius = B->radius * major(tb->scale);
 
     const float3 normal = ta->rotation.rotateVector(A->normal);
-    const float3 plane_d = normal * A->d + ta->position;
+    const float3 plane_d = normal * (length(ta->position)) + ta->position;
 
     /* Distance from center of sphere to plane surface */
     const f32 distance = dot(b_center - plane_d, normal);
-    // const f32 d = dot(normal, b_center) - plane_d;
 
     if (distance > b_radius) {
         return CollisionPoints();
@@ -66,4 +66,19 @@ CollisionPoints ct_plane_vs_sphere(const Collider* a, const Transform* ta, const
     const float3 b_deep = b_center - normal * distance;
 
     return CollisionPoints(a_deep, b_deep, normal, distance);
+}
+
+CollisionPoints ct_box_vs_sphere(const Collider* a, const Transform* ta, const Collider* b,
+                                 const Transform* tb) {
+    using Box = BoxCollider;
+    using Sphere = SphereCollider;
+
+    Box* A = (Box*)a;
+    Sphere* B = (Sphere*)b;
+
+    if (not gjk(*a, *ta, *b, *tb)) {
+        return CollisionPoints();
+    }
+
+    return CollisionPoints(0, 0);
 }
