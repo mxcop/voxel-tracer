@@ -520,6 +520,20 @@ inline float length( const float2& v ) { return sqrtf( dot( v, v ) ); }
 inline float length( const float3& v ) { return sqrtf( dot( v, v ) ); }
 inline float length( const float4& v ) { return sqrtf( dot( v, v ) ); }
 
+inline float major(const float3& v) {
+    if (v.x > v.y) {
+        if (v.x > v.z)
+            return v.x;
+        else
+            return v.z;
+    } else {
+        if (v.y > v.z)
+            return v.y;
+        else
+            return v.z;
+	}
+};
+
 inline float length( const int2& v ) { return sqrtf( (float)dot( v, v ) ); }
 inline float length( const int3& v ) { return sqrtf( (float)dot( v, v ) ); }
 inline float length( const int4& v ) { return sqrtf( (float)dot( v, v ) ); }

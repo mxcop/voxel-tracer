@@ -16,6 +16,7 @@ class PhyWorld {
     PhyWorld();
 
     void step(const f32 dt);
+    void resolve(const f32 dt);
 
     /**
      * @brief Add a new physics object to the world.

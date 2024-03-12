@@ -24,7 +24,7 @@ HitInfo Sphere::intersect(const Ray& ray) const {
     }
 
     hit.depth = tmin;
-    hit.albedo = float4(1, 1, 1, 0.001f);
+    hit.albedo = float4(1, 1, 1, 0);
     const float3 p = (ray.origin + ray.dir * tmin);
     hit.normal = normalize(p - pos);
     return hit;

@@ -12,6 +12,7 @@
 #include "graphics/tonemap.h"
 
 #include "engine/physics/world.h"
+#include <graphics/primitives/basic/sphere.h>
 
 class Renderer : public TheApp {
    public:
@@ -37,7 +38,7 @@ class Renderer : public TheApp {
     inline float4 insert_accu_raw(const u32 x, const u32 y, const float4& c) const {
         const float4 new_color = c;
         const float4 acc_color = accu[x + y * WIN_WIDTH];
-        if (acc_color.x == 0 && acc_color.y == 0 && acc_color.z == 0 && acc_color.w == 0) {
+        if (accu_reset) {
             accu[x + y * WIN_WIDTH] = new_color;
             return new_color;
         }
@@ -50,6 +51,7 @@ class Renderer : public TheApp {
     inline void reset_accu() {
         accu_len = 1u, memset(accu, 0, (size_t)WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
         frame = 0;
+        accu_reset = true;
     };
 
     int2 mousePos;
@@ -65,7 +67,8 @@ class Renderer : public TheApp {
 #if USE_BVH
     Traceable* shapes[7];
     Bvh* bvh = nullptr;
-    OVoxelVolume* test_vv = nullptr;
+    Sphere* test_vv = nullptr;
+    Sphere* test_plane_vv = nullptr;
     OVoxelVolume* arm_vv = nullptr;
 #else
     VoxelVolume* volume = nullptr;
@@ -78,10 +81,12 @@ class Renderer : public TheApp {
     /* Accumulator */
     float4* accu = nullptr;
     mutable u32 accu_len = 1u;
+    mutable bool accu_reset = true;
 
     bool fast_mode = true;
 
     /* Physics testing */
     PhyWorld world;
     PhyObject* test_obj = nullptr;
+    PhyObject* test_plane_obj = nullptr;
 };

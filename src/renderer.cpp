@@ -87,35 +87,46 @@ void Renderer::init() {
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
     // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #if USE_BVH
-    shapes[0] = new AABB(float3(-1), float3(0), float3(1));
+    // shapes[0] = new AABB(float3(-1), float3(0), float3(1));
+    test_plane_vv = new Sphere(
+        float3(0.0f, 10.0f,
+               0.0f), 0.25f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
+    shapes[0] = test_plane_vv;
     shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
     // test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
-    test_vv = new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
-    test_vv->set_rotation(normalize(RandomFloat3()) * TWOPI);
+    test_vv = new Sphere(
+        float3(0.0f, 10.0f, 0.0f),
+        1.0f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
+    // test_vv->set_rotation(normalize(RandomFloat3()) * TWOPI);
     shapes[2] = test_vv;
     // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
     const f32 VOXEL = 1.0f / 20.0f;
     auto arm1 = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
-    arm_vv = new OVoxelVolume(float3(-4.0f, 2.5f + VOXEL * 20.0f, -0.5f), "assets/vox/robot-arm.vox");
+    arm_vv =
+        new OVoxelVolume(float3(-4.0f, 2.5f + VOXEL * 20.0f, -0.5f), "assets/vox/robot-arm.vox");
     arm1->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
     arm1->set_rotation(float3(0));
     arm_vv->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
     arm_vv->set_rotation(float3(0, 0, 1));
     shapes[1] = arm1;
     // shapes[2] = arm_vv;
-    shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/robot-arm-base.vox");
-     //shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/crate-16.vox");
+    shapes[3] =
+        new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/robot-arm-base.vox");
+    // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f),
+    // "assets/vox/crate-16.vox");
 
     shapes[4] = new OVoxelVolume(float3(-3.0f, 2.5f + VOXEL * 6, -0.5f), "assets/vox/crate-10.vox");
-    shapes[5] = new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f),
-                                 "assets/vox/crate-16h.vox");
-    //shapes[6] = new OVoxelVolume(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
-    shapes[6] = new Sphere(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), 0.5f);
+    shapes[5] =
+        new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f), "assets/vox/crate-16h.vox");
+    shapes[6] =
+        new OVoxelVolume(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
+    // shapes[6] = new Sphere(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), 0.5f);
 
     bvh = new Bvh(7, shapes);
 
     /* Physics testing */
-    test_obj = world.add_object(PhyObject(float3(0, 10, 0), 0.01f));
+    test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.0f), float3(0, 10, 0.75f), 0.01f));
+    test_plane_obj = world.add_object(PhyObject(new PlaneCollider(float3(0, 1, 0), 1.0f), 0, 0));
 
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
@@ -232,15 +243,14 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
     for (u32 i = 0; i < SAMPLES; i++) {
         /* Blue noise + R2 (cosine weighted distribution) */
         const float2 raw_noise = bnoise->sample_2d(x, y);
-        const f32 quasi_x = fmod(raw_noise.x + R2X_2D * (f32)(frame + i), 1.0f) * 0.95f + 0.025f;
-        const f32 quasi_y = fmod(raw_noise.y + R2Y_2D * (f32)(frame + i), 1.0f) * 0.95f + 0.025f;
-        // const float3 ambient_dir = sample_hemisphere_weighted(quasi_x, quasi_y, hit.normal);
+        const f32 quasi_x = fmod(raw_noise.x + R2X_2D * (f64)(frame + i), 1.0f) * 0.99f + 0.005f;
+        const f32 quasi_y = fmod(raw_noise.y + R2Y_2D * (f64)(frame + i), 1.0f) * 0.99f + 0.005f;
         const float3 ambient_dir = cosineweighteddiffusereflection(hit.normal, quasi_x, quasi_y);
 
         /* Shoot the ambient ray */
         const Ray ambient_ray = Ray(hit_pos, ambient_dir * 16.0f);
 #ifdef DEV
-        const bool in_shadow = volume->is_occluded(ambient_ray, BIG_F32, &al_steps);
+        const bool in_shadow = volume->is_occluded(ambient_ray, 1.0f, &al_steps);
 #else
         const bool in_shadow = volume->is_occluded(ambient_ray);
 #endif
@@ -248,9 +258,9 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         if (not in_shadow) {
             /* Adjust the samples based on their probability distribution function (PDF) */
             const f32 pdf = dot(ambient_dir, hit.normal) * INVPI; /* (cos(a) / PI) */
-            // const float3 sample = skydome.sample_dir(ambient_dir);
-            const float3 sample = skydome.sample_voxel_normal(hit.normal);
-            ambient_c += (sample / pdf);
+            const float3 sample = skydome.sample_dir(ambient_dir);
+            // const float3 sample = skydome.sample_voxel_normal(hit.normal);
+            ambient_c += clamp_color(sample / pdf, 6.0f);
         }
     }
     /* Divide by the number of samples */
@@ -381,12 +391,20 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
 
 void Renderer::tick(f32 dt) {
     frame++;
-    if (frame > 240) frame = 0;
+    if (frame > 120) frame = 0;
     Timer t;
 
 #if USE_BVH
     world.step(dt);
-    test_vv->set_position(test_obj->position);
+    Transform& transform = test_obj->transform;
+    if (transform.position.y < -10.0f) {
+        transform.position.y = 5.0f;
+        test_obj->velocity = 0;
+    }
+    test_vv->pos = transform.position;
+    test_plane_vv->pos = test_plane_obj->transform.position;
+    // test_plane_vv->set_position(test_plane_obj->transform.position);
+    // test_vv->set_position(transform.position);
     bvh->build(7, shapes);
     reset_accu();
 #endif
@@ -519,8 +537,10 @@ void Renderer::tick(f32 dt) {
 
 #if USE_BVH
     // test_vv->set_rotation(normalize(float3(1, 1, 0)), (frame * 3) * 0.0174533f);
-    //bvh->build(3, shapes);
+    // bvh->build(3, shapes);
 #endif
+
+    accu_reset = false;
 
     /* Update the camera */
     if (camera.update(dt)) {

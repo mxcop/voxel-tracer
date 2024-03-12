@@ -1,5 +1,17 @@
 #pragma once
 
+/**
+ * @brief Clamp a color to a maximum magnitude.
+ */
+inline float3 clamp_color(const float3& color, const f32 max_mag) { 
+    const f32 sqr_mag = dot(color, color);
+    const f32 sqr_max = max_mag * max_mag;
+    if (sqr_mag > sqr_max) {
+        return normalize(color) * max_mag;
+    }
+    return color;
+}
+
 inline float3 reinhard(const float3& v) { return v / (1.0f + v); }
 
 inline float3 reinhard_extended(const float3& v, f32 max_white) {

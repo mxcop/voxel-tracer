@@ -1,9 +1,12 @@
-#include "precomp.h"
 #include "world.h"
+
+#include "collision/collision.h"
 
 PhyWorld::PhyWorld() : object_pool(Pool<PhyObject>(64)) {}
 
 void PhyWorld::step(const f32 dt) {
+    resolve(dt);
+
     for (PhyObject& obj : object_pool) {
         if (obj.mass == 0) continue;
 
@@ -12,9 +15,53 @@ void PhyWorld::step(const f32 dt) {
 
         /* Apply force and velocity */
         obj.velocity += obj.force / obj.mass * dt;
-        obj.position += obj.velocity * dt;
+        obj.transform.position += obj.velocity * dt;
 
         obj.force = 0;
+    }
+}
+
+void PhyWorld::resolve(const f32 dt) {
+    /* Collision buffer */
+    vector<Collision> c_buffer = {};
+    c_buffer.reserve(object_pool.get_size());
+
+    for (PhyObject& a : object_pool) {
+        for (PhyObject& b : object_pool) {
+            /* Don't collide with yourself */
+            if (&a == &b) break;
+
+            /* Check if any colliders are missing */
+            if (!a.collider || !b.collider) continue;
+
+            CollisionPoints points =
+                collision_test(a.collider, &a.transform, b.collider, &b.transform);
+            if (points.collision) c_buffer.emplace_back(&a, &b, points);
+        }
+    }
+
+    for (Collision& c : c_buffer) {
+        /* Testing collision! */
+        /*if (c.a->mass) {
+            c.a->transform.position.y = 10.0f;
+        }
+        if (c.b->mass) {
+            c.b->transform.position.y = 10.0f;
+        }*/
+        PhyObject* a_body = c.a;
+        PhyObject* b_body = c.b;
+
+        const f32 a_static = (int)(a_body->mass == 0);
+        const f32 b_static = (int)(b_body->mass == 0);
+
+        const float3 resolution =
+            c.points.normal * c.points.dist / fmaxf(1, a_static + b_static);
+
+        a_body->transform.position += resolution * (1.0f - a_static);
+        b_body->transform.position -= resolution * (1.0f - b_static);
+
+        a_body->velocity = 0;
+        b_body->velocity = 0;
     }
 }
 

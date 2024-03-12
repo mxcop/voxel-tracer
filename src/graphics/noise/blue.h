@@ -1,13 +1,13 @@
 #pragma once
 
 /* R2 irrationals */
-constexpr f32 R2 = 1.22074408460575947536f;
-constexpr f32 R2X = 1.0f / R2;
-constexpr f32 R2Y = 1.0f / (R2 * R2);
-constexpr f32 R2Z = 1.0f / (R2 * R2 * R2);
-constexpr f32 R2_2D = 1.32471795724474602596f;
-constexpr f32 R2X_2D = 1.0f / R2_2D;
-constexpr f32 R2Y_2D = 1.0f / (R2_2D * R2_2D);
+constexpr f64 R2 = 1.22074408460575947536;
+constexpr f64 R2X = 1.0 / R2;
+constexpr f64 R2Y = 1.0 / (R2 * R2);
+constexpr f64 R2Z = 1.0 / (R2 * R2 * R2);
+constexpr f64 R2_2D = 1.32471795724474602596;
+constexpr f64 R2X_2D = 1.0 / R2_2D;
+constexpr f64 R2Y_2D = 1.0 / (R2_2D * R2_2D);
 
 /* Textures obtained from : <http://momentsingraphics.de/BlueNoise.html> */
 /* Blue noise sampler */
