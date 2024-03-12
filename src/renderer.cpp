@@ -416,7 +416,7 @@ void Renderer::tick(f32 dt) {
     // test_plane_vv->set_position(test_plane_obj->transform.position);
     // test_vv->set_position(transform.position);
     bvh->build(7, shapes);
-    reset_accu();
+    // reset_accu();
 #endif
 
 #if 0
@@ -554,6 +554,20 @@ void Renderer::tick(f32 dt) {
 
     /* Update the camera */
     if (camera.update(dt)) {
+        reset_accu();
+    }
+
+    /* No accu mode switch */
+    static bool r_down = false;
+    static bool accu_mode = true;
+    if (IsKeyDown(GLFW_KEY_R) && r_down == false) {
+        accu_mode = !accu_mode;
+        r_down = true;
+    }
+    if (!IsKeyDown(GLFW_KEY_R) && r_down == true) {
+        r_down = false;
+    }
+    if (not accu_mode) {
         reset_accu();
     }
 }
