@@ -61,7 +61,7 @@ void devgui_control() {
         const char* modes[] = {"Final",         "Albedo",          "Normals", "Depth",
                                "Primary Steps", "Secondary Steps", "Ambient Steps"};
         if (ImGui::Combo("Display Mode", (i32*)&dev::display_mode, modes, IM_ARRAYSIZE(modes))) {
-            dev::renderer->reset_accu();
+            // dev::renderer->reset_accu();
         }
 
         /* Create sphere lights from the GUI */
@@ -73,7 +73,7 @@ void devgui_control() {
                 const float3 origin = dev::renderer->camera.pos;
                 dev::renderer->area_lights.emplace_back(origin, inter::radius, inter::light_color,
                                                         inter::power);
-                dev::renderer->reset_accu();
+                // dev::renderer->reset_accu();
             }
         }
     }

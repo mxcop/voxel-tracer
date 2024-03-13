@@ -99,7 +99,8 @@ struct ALIGN( 16 ) float4
 	float4( const uint4 a ) : x( (float)a.x ), y( (float)a.y ), z( (float)a.z ), w( (float)a.w ) {}
 	float4( const int4 a ) : x( (float)a.x ), y( (float)a.y ), z( (float)a.z ), w( (float)a.w ) {}
 	union { struct { float x, y, z, w; }; float cell[4]; };
-	float& operator [] ( const int n ) { return cell[n]; }
+    float& operator[](const int n) { return cell[n]; }
+    const float& operator[](const int n) const { return cell[n]; }
 };
 struct float3
 {

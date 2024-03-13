@@ -31,7 +31,7 @@ float4 SphereLight::contribution(const Ray& pray, const HitInfo& phit, const flo
     /* Finally calculate the contribution */
     const f32 i = intensity(dist_sqr);
     const float4 sample = color * i * incidence * pdf;
-    return phit.albedo * sample;
+    return sample;
 }
 
 float4 SphereLight::contribution(const Ray& pray, const HitInfo& phit, const float3& surface,
@@ -62,7 +62,7 @@ float4 SphereLight::contribution(const Ray& pray, const HitInfo& phit, const flo
     /* Finally calculate the contribution */
     const f32 i = intensity(dist_sqr);
     const float4 sample = color * i * incidence * pdf;
-    return phit.albedo * sample;
+    return sample;
 }
 
 float4 SphereLight::contribution(const Ray& pray, const HitInfo& phit, const float3& surface,
@@ -93,5 +93,5 @@ float4 SphereLight::contribution(const Ray& pray, const HitInfo& phit, const flo
     /* Finally calculate the contribution */
     const f32 i = intensity(dist_sqr);
     const float4 sample = color * i * incidence * pdf;
-    return phit.albedo * sample;
+    return sample;
 }

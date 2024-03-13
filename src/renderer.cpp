@@ -4,6 +4,7 @@
 #include "dev/gui.h"
 #include "graphics/rays/frustum.h"
 #include "graphics/primitives/basic/sphere.h"
+#include <graphics/noise/gaussian.h>
 
 u32 HSBtoRGB(f32 h, f32 s, f32 v) {
     assert(-360 <= h && h <= 360 && "h must be within [-360; 360]");
@@ -79,8 +80,15 @@ void Renderer::init() {
     /* Create the accumulator */
     accu = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
     if (accu) memset(accu, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+    albedo_buf = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+    if (albedo_buf) memset(albedo_buf, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
     prev_frame = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
     if (prev_frame) memset(prev_frame, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+
+#if DENOISE
+    blur_in = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+    blur_out = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+#endif
 
     bnoise = new BlueNoise();
     skydome = SkyDome("assets/kiara_1_dawn_8k.hdr");
@@ -90,8 +98,8 @@ void Renderer::init() {
     // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #if USE_BVH
     test_plane_vv = new Sphere(
-        float3(0.0f, 10.0f,
-               0.0f), 0.25f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
+        float3(0.0f, 10.0f, 0.0f),
+        0.25f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
     shapes[0] = test_plane_vv;
     shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
     // test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
@@ -138,7 +146,8 @@ void Renderer::init() {
     // texture = new Surface("assets/very-serious-test-image.png");
 }
 
-float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
+TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
+    TraceResult result;
 #if USE_BVH
     const Bvh* volume = this->bvh;
 #endif
@@ -173,7 +182,7 @@ float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
         hit_pos = ray.origin + ray.dir * hit.depth /* + hit.normal * 0.000001f*/;
     }
 #endif
-    float4 color = float4(0, 0, 0, hit.depth);
+    result.albedo = float4(0);
 
 #if 0
     /* Textures */
@@ -203,35 +212,44 @@ float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
     /* Handle special display modes, for debugging */
     if (dev::display_mode != dev::DM::FINAL) {
         if (dev::display_mode != dev::DM::PRIMARY_STEPS) {
-            if (hit.depth >= BIG_F32) return 0xFF101010;
+            if (hit.depth >= BIG_F32) {
+                result.albedo = float4(0.06f); /* 0xFF101010 */
+                result.irradiance = -1;
+                return result;
+            }
         }
 
-        float4 dc;
         switch (dev::display_mode) {
             case dev::DM::ALBEDO:
-                return hit.albedo;
+                result.albedo = hit.albedo;
+                result.irradiance = -1;
+                return result;
             case dev::DM::NORMALS:
-                // dc = float4(hit.normal + 1.0f * 0.5f, 1.0f);
-                dc = float4(fmaxf(hit.normal, 0.0f), 1.0f);
-                return dc;
+                result.albedo = float4(fmaxf(hit.normal, 0.0f), 1.0f);
+                result.irradiance = -1;
+                return result;
             case dev::DM::DEPTH:
-                dc = float4(hit.depth / 16.0f, hit.depth / 16.0f, hit.depth / 16.0f, 1.0f);
-                return dc;
+                result.albedo =
+                    float4(hit.depth / 16.0f, hit.depth / 16.0f, hit.depth / 16.0f, 1.0f);
+                result.irradiance = -1;
+                return result;
             case dev::DM::PRIMARY_STEPS:
-                dc = float4(hit.steps / 64.0f, hit.steps / 64.0f, hit.steps / 64.0f, 1.0f);
-                return dc;
+                result.albedo =
+                    float4(hit.steps / 64.0f, hit.steps / 64.0f, hit.steps / 64.0f, 1.0f);
+                result.irradiance = -1;
+                return result;
         }
     }
 #endif
 
     /* Skybox color if the ray missed */
     if (hit.depth >= BIG_F32) {
-        color = skydome.sample_dir(ray.dir);
-        color.w = BIG_F32;
-        return color;
+        result.albedo = skydome.sample_dir(ray.dir);
+        result.irradiance = 0;
+        return result;
     }
 
-    const float3 hit_color = float3(hit.albedo);
+    result.albedo = hit.albedo;
 
     /* Ambient light */
 #if 1
@@ -244,8 +262,8 @@ float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
     for (u32 i = 0; i < SAMPLES; i++) {
         /* Blue noise + R2 (cosine weighted distribution) */
         const float2 raw_noise = bnoise->sample_2d(x, y);
-        const f32 quasi_x = fmod(raw_noise.x + R2X_2D * (f64)(frame + i), 1.0f) * 0.99f + 0.005f;
-        const f32 quasi_y = fmod(raw_noise.y + R2Y_2D * (f64)(frame + i), 1.0f) * 0.99f + 0.005f;
+        const f32 quasi_x = fmod(raw_noise.x + R2X_2D * (f64)(frame + i), 1.0f);
+        const f32 quasi_y = fmod(raw_noise.y + R2Y_2D * (f64)(frame + i), 1.0f);
         const float3 ambient_dir = cosineweighteddiffusereflection(hit.normal, quasi_x, quasi_y);
 
         /* Shoot the ambient ray */
@@ -265,14 +283,14 @@ float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
         }
     }
     /* Divide by the number of samples */
-    color += hit_color * (ambient_c * (1.0f / SAMPLES)) * 0.5f;
+    result.irradiance += (ambient_c * (1.0f / SAMPLES)) * 0.5f;
 
 #ifdef DEV
     /* Handle special display modes, for debugging */
     if (dev::display_mode == dev::DM::AMBIENT_STEPS) {
-        float4 dc;
-        dc = float4(al_steps / 64.0f, al_steps / 64.0f, al_steps / 64.0f, 1.0f);
-        return dc;
+        result.albedo = float4(al_steps / 64.0f, al_steps / 64.0f, al_steps / 64.0f, 1.0f);
+        result.irradiance = -1;
+        return result;
     }
 #endif
 
@@ -309,17 +327,16 @@ float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
 
         if (not in_shadow) {
             const float3 sun_light = float3(0.5f);
-            color += hit_color * sun_light * incidence;
+            result.irradiance += sun_light * incidence;
         }
     }
 
 #ifdef DEV
     /* Handle special display modes, for debugging */
     if (dev::display_mode == dev::DM::SECONDARY_STEPS) {
-        float4 dc;
-        dc = float4(dl_steps / 64.0f, dl_steps / 64.0f, dl_steps / 64.0f, 1.0f);
-
-        return dc;
+        result.albedo = float4(dl_steps / 64.0f, dl_steps / 64.0f, dl_steps / 64.0f, 1.0f);
+        result.irradiance = -1;
+        return result;
     }
 #endif
 
@@ -332,7 +349,7 @@ float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
                                                fmod(raw_noise.z + R2Z * (f32)frame, 1.0f));
 
         /* Get the contribution for this light */
-        color += light.contribution(ray, hit, hit_pos, volume, quasi_noise);
+        result.irradiance += light.contribution(ray, hit, hit_pos, volume, quasi_noise);
         noise_n++;
     }
 
@@ -380,10 +397,12 @@ float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
     }
 #endif
 
-    color.w = hit.depth;
-    return color;
+    return result;
 }
 
+/**
+ * @brief Called every frame.
+ */
 void Renderer::tick(f32 dt) {
     frame++;
     if (frame > 120) frame = 0;
@@ -406,196 +425,71 @@ void Renderer::tick(f32 dt) {
     }
     test_vv->pos = transform.position;
     test_plane_vv->pos = test_plane_obj->transform.position;
-    
+
     // test_plane_vv->set_position(test_plane_obj->transform.position);
     // test_vv->set_position(transform.position);
     bvh->build(7, shapes);
     // reset_accu();
 #endif
 
-#if 0
-    // #pragma omp parallel for schedule(dynamic)
-    //     for (i32 y = 0; y < WIN_HEIGHT / 12; y++) {
-    // #pragma omp parallel for schedule(dynamic)
-    //         for (i32 x = 0; x < WIN_WIDTH / 12; x++) {
-    //             const u32 xs = x * 12, ys = y * 12;
-    //             const Ray ray0 = camera.get_primary_ray(xs, ys);
-    //             const Ray ray1 = camera.get_primary_ray(xs + 11, ys);
-    //             const Ray ray2 = camera.get_primary_ray(xs, ys + 11);
-    //             const Ray ray3 = camera.get_primary_ray(xs + 11, ys + 11);
-    //             const Frustum frustum(ray0.origin, ray0.dir, ray1.dir, ray2.dir, ray3.dir,
-    //             100.0f);
-    //
-    //             if (frustum.intersect_unitcube()) {
-    //                 for (u32 i = 0; i < 12; i++) {
-    //                     for (u32 j = 0; j < 12; j++) {
-    //                         const u32 xj = j + xs, yi = i + ys;
-    //                         const Ray ray = camera.get_primary_ray(xj, yi);
-    //                         const f32 r = bvh->intersect(ray);
-    //                         const float4 dc = float4(r / 16.0f, r / 16.0f, r / 16.0f, 1.0f);
-    //                         const u32 color = RGBF32_to_RGB8(&dc);
-    //                         screen->pixels[xj + yi * WIN_WIDTH] = color;
-    //
-    //                         // screen->pixels[(j + xs) + (i + ys) * WIN_WIDTH] |= 0xFF00FF00;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-
-#pragma omp parallel for schedule(dynamic)
-    for (i32 y = 0; y < WIN_HEIGHT; ++y) {
-        for (i32 x = 0; x < WIN_WIDTH; ++x) {
-            Ray ray = camera.get_primary_ray(x, y);
-            const HitInfo hit = bvh->intersect(ray);
-            // const float4 dc = float4(hit.depth / 64.0f, hit.depth / 64.0f, hit.depth / 64.0f, 1.0f);
-            float4 dc;
-            switch (dev::display_mode) {
-                case dev::DM::ALBEDO:
-                    dc = hit.albedo;
-                    break;
-                case dev::DM::NORMALS:
-                    dc = float4(fmaxf(hit.normal, 0.0f), 1.0f);
-                    break;
-                case dev::DM::DEPTH:
-                    dc = float4(hit.depth / 64.0f, hit.depth / 64.0f, hit.depth / 64.0f, 1.0f);
-                    break;
-                case dev::DM::PRIMARY_STEPS:
-                    dc = float4(hit.steps / 64.0f, hit.steps / 64.0f, hit.steps / 64.0f, 1.0f);
-                    break;
-                default:
-                    dc = float4(hit.depth / 64.0f, hit.depth / 64.0f, hit.depth / 64.0f, 1.0f);
-                    break;
-            }
-
-            u32 color = RGBF32_to_RGB8(&dc);
-            screen->pixels[x + y * WIN_WIDTH] = color;
-        }
-    }
-#elif 1
 #pragma omp parallel for schedule(dynamic)
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
             Ray ray = camera.get_primary_ray(x, y);
 
-            HitInfo hit;
-            const float4 color = trace(ray, hit, x, y);
+            HitInfo hit; /* Trace the scene */
+            const TraceResult r = trace(ray, hit, x, y);
 
-            /* Reproject */
-            float4 acc_color = color;
-            if (hit.depth < BIG_F32) {
-                const float2 prev_uv =
-                    camera.prev_pyramid.project(ray.origin + ray.dir * hit.depth);
-                if (prev_uv.x >= 0 && prev_uv.x <= 1 && prev_uv.y >= 0 && prev_uv.y <= 1) {
-                    const i32 px = static_cast<i32>(fminf((prev_uv.x * WIN_WIDTH) + 0.5f, WIN_WIDTH - 1));
-                    const i32 py = static_cast<i32>(fminf((prev_uv.y * WIN_HEIGHT) + 0.5f, WIN_HEIGHT - 1));
-                    
-                    acc_color = prev_frame[px + py * WIN_WIDTH];
-                }
+            if (hit.depth >= BIG_F32) {
+                const float4 c = aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(1.0f, hit.depth)));
+                albedo_buf[x + y * WIN_WIDTH] = r.albedo * 1.0f;
+                screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
+                continue;
             }
 
-            const float4 new_color = (color * 0.1f) + (acc_color * 0.9f);
-            accu[x + y * WIN_WIDTH] = new_color;
+            if (r.irradiance.x == -1) {
+#if DENOISE
+                const float4 c = insert_accu_raw(x, y, ray, float4(r.albedo, hit.depth));
+#else
+                const float4 c = r.albedo;
+#endif
+                screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
+                continue;
+            }
 
-            const float4 c = aces_approx(new_color);
+            /* Accumulate and reproject */
+            const float4 c = aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(r.irradiance, hit.depth)));
+            albedo_buf[x + y * WIN_WIDTH] = r.albedo;
             screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
         }
     }
 
-    // FLIP THE POINTERS !!!
-    /* Update the previous frame */
-    float4* temp = accu;
-    accu = prev_frame;
-    prev_frame = temp;
-    // memcpy(prev_frame, accu, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+#if DENOISE
+    /* Blur */
+    memcpy(blur_in, accu, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+    fast_gaussian_blur(blur_in, blur_out, WIN_WIDTH, WIN_HEIGHT, 2, 2.0f);
 
-    // for (i32 y = 0; y < WIN_HEIGHT / 12; y++) {
-    //     for (i32 x = 0; x < WIN_WIDTH / 12; x++) {
-    //         u32 xs = x * 12, ys = y * 12;
-    //         Ray ray0 = camera.get_primary_ray(xs, ys);
-    //         Ray ray1 = camera.get_primary_ray(xs + 11, ys);
-    //         Ray ray2 = camera.get_primary_ray(xs, ys + 11);
-    //         Ray ray3 = camera.get_primary_ray(xs + 11, ys + 11);
-    //         Frustum frustum(ray0.origin, ray0.dir, ray1.dir, ray2.dir, ray3.dir, 100.0f);
-
-    //        if (frustum.intersect_unitcube()) {
-    //            for (u32 i = 0; i < 12; i++) {
-    //                for (u32 j = 0; j < 12; j++) {
-    //                    //u32 xj = j + xs, yi = i + ys;
-    //                    //Ray ray = camera.get_primary_ray(xj, yi);
-    //                    //u32 color = trace(ray, xj, yi);
-    //                    //screen->pixels[xj + yi * WIN_WIDTH] = color;
-
-    //                    screen->pixels[(j + xs) + (i + ys) * WIN_WIDTH] |= 0xFF00FF00;
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-#else
-    // 12.6M rays/s
-#pragma omp parallel for schedule(dynamic)
-    for (i32 y = 0; y < WIN_HEIGHT; y += 2) {
-        for (i32 x = 0; x < WIN_WIDTH; x += 2) {
-            const RayPacket128 packet = camera.get_primary_packet(x, y);
-            const PacketHitInfo hit = volume->intersect(packet);
-
-            for (u32 v = 0; v < 2; ++v) {
-                for (u32 u = 0; u < 2; ++u) {
-                    const f32 depth = hit.depth.m128_f32[u + v * 2];
-                    /*if (depth == 0.0f) {
-                        screen->pixels[(x + u) + (y + v) * WIN_WIDTH] = 0xFFFF1010;
-                        continue;
-                    }*/
-                    if (depth >= BIG_F32) {
-                        screen->pixels[(x + u) + (y + v) * WIN_WIDTH] = 0xFF101010;
-                        continue;
-                    }
-                    const u32 cd = fminf(depth / 32.0f, 1.0f) * 0xFF;
-                    // const u32 cd = (hit.steps / 256.0f) * 0xFF;
-                    const u32 color = (cd << 0) | (cd << 8) | (cd << 16) | 0xFF000000;
-                    screen->pixels[(x + u) + (y + v) * WIN_WIDTH] = color;
-                }
-            }
+    for (i32 y = 0; y < WIN_HEIGHT; ++y) {
+        for (i32 x = 0; x < WIN_WIDTH; ++x) {
+            u32 i = x + y * WIN_WIDTH;
+            const float4 c = aces_approx(albedo_buf[x + y * WIN_WIDTH] * blur_out[i]);
+            screen->pixels[i] = RGBF32_to_RGB8(&c);
         }
     }
 #endif
 
-    accu_len++;
+    /* Swap the accumulator and the previous frame pointers */
+    /* Faster than copying everything from the accu to the prev */
+    float4* temp = accu;
+    accu = prev_frame;
+    prev_frame = temp;
+
 #ifdef DEV
     dev::frame_time = t.elapsed();
 #endif
 
-#if USE_BVH
-    // test_vv->set_rotation(normalize(float3(1, 1, 0)), (frame * 3) * 0.0174533f);
-    // bvh->build(3, shapes);
-#endif
-
-    accu_reset = false;
-
     /* Update the camera */
-    //const float2 old_uv = camera.prev_pyramid.project(float3(-3.0f, 2.5f - 0.05f * 3, -0.5f));
-    if (camera.update(dt)) {
-        // reset_accu();
-    }
-    //const float2 new_uv = camera.prev_pyramid.project(float3(-3.0f, 2.5f - 0.05f * 3, -0.5f));
-    //if (old_uv.x != new_uv.x || old_uv.y != new_uv.y) {
-    //    printf("difference! (%f, %f)\n", (old_uv.x - new_uv.x) * WIN_WIDTH, (old_uv.y - new_uv.y) * WIN_HEIGHT);
-    //}
-
-    /* No accu mode switch */
-    static bool r_down = false;
-    static bool accu_mode = true;
-    if (IsKeyDown(GLFW_KEY_R) && r_down == false) {
-        accu_mode = !accu_mode;
-        r_down = true;
-    }
-    if (!IsKeyDown(GLFW_KEY_R) && r_down == true) {
-        r_down = false;
-    }
-    if (not accu_mode) {
-        reset_accu();
-    }
+    depth_delta = camera.update(dt);
 }
 
 void Renderer::gui(f32 dt) {
@@ -613,7 +507,6 @@ void Renderer::gui(f32 dt) {
         arm_vv->set_pivot(test_pivot);
         arm_vv->set_rotation(float3(0, 0, test_angle));
         bvh->build(7, shapes);
-        reset_accu();
     }
 #endif
 
@@ -625,7 +518,6 @@ void Renderer::gui(f32 dt) {
         } else {
             dev::display_mode = dev::DM::FINAL;
         }
-        reset_accu();
         f_down = true;
     }
     if (!IsKeyDown(GLFW_KEY_F) && f_down == true) {
@@ -666,6 +558,5 @@ void Renderer::MouseDown(int button) {
 
     if (button == 0) {
         // volume->place_voxel(camera.get_primary_ray(mousePos.x, mousePos.y));
-        reset_accu();
     }
 }

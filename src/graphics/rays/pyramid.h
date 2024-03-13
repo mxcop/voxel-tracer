@@ -1,12 +1,14 @@
 #pragma once
 
+/**
+ * @brief View pyramid. (used for reprojection)
+ */
 class Pyramid {
+    /* Pyramid plane */
     struct Plane {
-        float3 normal;
-        f32 d;
+        float4 normal;
     };
 
-    float3 origin = 0;
     Plane planes[4] = {};
 
    public:
@@ -21,5 +23,11 @@ class Pyramid {
      */
     Pyramid(const float3& o, float3 tl, float3 tr, float3 bl);
 
+    /**
+     * @brief Project a world point onto the pyramid view.
+     * 
+     * @param point The point to project.
+     * @return UV coordinates of the point. (outside view if not between 0 and 1)
+     */
     float2 project(const float3& point) const;
 };

@@ -104,8 +104,8 @@ struct Camera {
         return RayPacket128(ro, rd);
     }
 
-    /* Update the camera and handle inputs. */
-    bool update(const f32 t);
+    /* Update the camera and handle inputs. (returns forward motion delta) */
+    f32 update(const f32 t);
 
    private:
     f32 focal_point = 0.01f;

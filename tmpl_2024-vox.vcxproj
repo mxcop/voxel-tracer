@@ -234,6 +234,7 @@
     <ClInclude Include="src\graphics\lighting\sample.h" />
     <ClInclude Include="src\graphics\lighting\sphere-light.h" />
     <ClInclude Include="src\graphics\noise\blue.h" />
+    <ClInclude Include="src\graphics\noise\gaussian.h" />
     <ClInclude Include="src\graphics\primitives\basic\aabb.h" />
     <ClInclude Include="src\graphics\primitives\basic\sphere.h" />
     <ClInclude Include="src\graphics\primitives\brick-volume.h" />

@@ -14,10 +14,17 @@
 #include "engine/physics/world.h"
 #include <graphics/primitives/basic/sphere.h>
 
+/* Quite expensive! */
+#define DENOISE 0
+
+struct TraceResult {
+    float4 albedo = 0, irradiance = 0;
+};
+
 class Renderer : public TheApp {
    public:
     void init();
-    float4 trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const;
+    TraceResult trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const;
     void tick(f32 dt);
     void gui(f32 dt);
     void shutdown();
@@ -30,29 +37,41 @@ class Renderer : public TheApp {
     void KeyDown(int key) {}
 
     /* Insert a new color into the accumulator (returns the color to display) */
-    inline float4 insert_accu(const u32 x, const u32 y, const float4& c) const {
-        //return aces_approx(insert_accu_raw(x, y, c));
+    inline float4 insert_accu(const u32 x, const u32 y, const Ray& ray, const float4& c) const {
+        return aces_approx(insert_accu_raw(x, y, ray, c));
     }
 
     /* Insert a new color into the accumulator without tonemapping (returns the color to display) */
-    inline float4 insert_accu_raw(const u32 x, const u32 y, const float4& c) const {
-        //const float4 new_color = c;
-        //const float4 acc_color = accu[x + y * WIN_WIDTH];
-        //if (accu_reset) {
-        //    accu[x + y * WIN_WIDTH] = new_color;
-        //    return new_color;
-        //}
-        //const float4 color = new_color * (0.1f) + acc_color * (0.9f);
-        //accu[x + y * WIN_WIDTH] = color;
-        //return color;
-    }
+    inline float4 insert_accu_raw(const u32 x, const u32 y, const Ray& ray, const float4& c) const {
+        /* Reproject (color.w is the depth) */
+        float4 acc_color = c;
+        f32 confidence = 0.9f;
+        if (c.w < BIG_F32) {
+            const float2 prev_uv = camera.prev_pyramid.project(ray.origin + ray.dir * c.w);
 
-    /* Reset the accumulator */
-    inline void reset_accu() {
-        //accu_len = 1u, memset(accu, 0, (size_t)WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
-        //frame = 0;
-        //accu_reset = true;
-    };
+            constexpr f32 MAX_U = 1.0f - (1.0f / WIN_WIDTH) * 0.5f;
+            constexpr f32 MAX_V = 1.0f - (1.0f / WIN_HEIGHT) * 0.5f;
+
+            if (prev_uv.x >= 0 && prev_uv.x < MAX_U && prev_uv.y >= 0 && prev_uv.y < MAX_V) {
+                const i32 px = static_cast<i32>((prev_uv.x * WIN_WIDTH) + 0.5f);
+                const i32 py = static_cast<i32>((prev_uv.y * WIN_HEIGHT) + 0.5f);
+
+                const float4 prev_c = prev_frame[px + py * WIN_WIDTH];
+
+                /* Depth rejection (take into account camera movement "depth_delta") */
+                const f32 depth_diff = fabs(prev_c.w - (c.w + depth_delta));
+                if (depth_diff < 0.2f) {
+                    confidence = max(confidence - depth_diff * 3.0f, 0.0f);
+                    acc_color = prev_c;
+                }
+            }
+        }
+
+        /* Merge */
+        const float4 color = (c * (1.0f - confidence)) + (acc_color * confidence);
+        accu[x + y * WIN_WIDTH] = float4(color.x, color.y, color.z, c.w);
+        return color;
+    }
 
     int2 mousePos;
     f32 frame_time = 1.0f;
@@ -60,6 +79,7 @@ class Renderer : public TheApp {
     float3 sun_dir = {-0.619501f, 0.465931f, -0.631765f};
 
     Camera camera;
+    f32 depth_delta = 0;
     vector<LightSource> lights;
     vector<SphereLight> area_lights;
     Surface* texture = nullptr;
@@ -78,11 +98,16 @@ class Renderer : public TheApp {
     BlueNoise* bnoise = nullptr;
     SkyDome skydome;
 
-    /* Accumulator */
+    /* === BUFFERS === */
+    /* Accumulator (reprojection) */
     float4* accu = nullptr;
+    float4* albedo_buf = nullptr;
+    /* Stores XYZ: color, W: depth */
     float4* prev_frame = nullptr;
-    mutable u32 accu_len = 1u;
-    mutable bool accu_reset = true;
+
+#if DENOISE
+    float4 *blur_in = nullptr, *blur_out = nullptr;
+#endif
 
     bool fast_mode = true;
 

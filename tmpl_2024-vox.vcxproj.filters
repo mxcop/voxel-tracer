@@ -136,6 +136,7 @@
     <ClInclude Include="src\engine\physics\collision\gjk.h" />
     <ClInclude Include="src\engine\physics\collision\simplex.h" />
     <ClInclude Include="src\graphics\rays\pyramid.h" />
+    <ClInclude Include="src\graphics\noise\gaussian.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">
