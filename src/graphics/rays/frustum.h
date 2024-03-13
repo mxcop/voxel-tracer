@@ -25,4 +25,6 @@ class Frustum {
             const float3 fd_br, const f32 extend = 1'000.0f);
 
     bool intersect_unitcube() const;
+
+    float2 project(const float3& point) const;
 };

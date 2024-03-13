@@ -71,7 +71,7 @@ bool Frustum::intersect_unitcube() const {
             }
         }
     }
-
+    
     /* Cube planes */
     float4 cube_planes[6] = {};
     cube_planes[0] = float4 (-1.0f, 0.0f, 0.0f,cube_max.x);
@@ -107,4 +107,19 @@ bool Frustum::intersect_unitcube() const {
         intersects &= isAnyVertexInPositiveSide;
     }
     return intersects;
+}
+
+float2 Frustum::project(const float3& point) const {
+    /* Left & Right */
+    const f32 d1 = dot(float3(planes[0]), point - corners[4]);
+    const f32 d2 = dot(float3(planes[2]), point - corners[4]);
+
+    /* Top & Bottom */
+    const f32 d3 = dot(float3(planes[1]), point - corners[4]);
+    const f32 d4 = dot(float3(planes[3]), point - corners[4]);
+
+    const f32 u = d1 / (d1 + d2);
+    const f32 v = d3 / (d3 + d4);
+    
+    return make_float2(u, v);
 }

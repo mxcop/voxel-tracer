@@ -54,6 +54,7 @@
     <ClCompile Include="src\engine\physics\collision\collision.cpp" />
     <ClCompile Include="src\engine\physics\collision\colliders.cpp" />
     <ClCompile Include="src\engine\physics\collision\gjk.cpp" />
+    <ClCompile Include="src\graphics\rays\pyramid.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\renderer.h" />
@@ -134,6 +135,7 @@
     <ClInclude Include="src\engine\physics\transform.h" />
     <ClInclude Include="src\engine\physics\collision\gjk.h" />
     <ClInclude Include="src\engine\physics\collision\simplex.h" />
+    <ClInclude Include="src\graphics\rays\pyramid.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

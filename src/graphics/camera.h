@@ -2,6 +2,7 @@
 
 #include "rays/ray.h"
 #include "rays/packet.h"
+#include "rays/pyramid.h"
 
 constexpr float3 UP = float3(0, 1, 0);
 constexpr f32 ASPECT_RATIO = (f32)WIN_WIDTH / (f32)WIN_HEIGHT;
@@ -10,12 +11,15 @@ struct Camera {
     float3 pos, target;
     float3 tl, tr, bl;
 
+    Pyramid prev_pyramid;
+
     Camera() {
         pos = float3(0, 0, -2);
         target = float3(0, 0, -1);
         tl = float3(-ASPECT_RATIO, 1, 0);
         tr = float3(ASPECT_RATIO, 1, 0);
         bl = float3(-ASPECT_RATIO, -1, 0);
+        prev_pyramid = Pyramid(pos, tl, tr, bl);
     }
 
     /* Get a new primary ray from an X and Y pixel coordinate. */
@@ -24,6 +28,12 @@ struct Camera {
         const f32 u = x * (1.0f / WIN_WIDTH), v = y * (1.0f / WIN_HEIGHT);
         const float3 ray_end = tl + u * (tr - tl) + v * (bl - tl);
         return Ray(pos, normalize(ray_end - pos));
+    }
+
+    inline float3 get_dir(const f32 u, const f32 v) const {
+        /* UV coordinates */
+        const float3 ray_end = tl + u * (tr - tl) + v * (bl - tl);
+        return normalize(ray_end - pos);
     }
 
     /* Bundle of 4 x 3D vectors. */

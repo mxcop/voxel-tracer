@@ -4,6 +4,8 @@ bool Camera::update(const f32 t) {
     if (not WindowHasFocus()) return false;
     f32 speed = 1.5f * t;
 
+    prev_pyramid = Pyramid(pos, get_dir(0, 0), get_dir(1, 0), get_dir(0, 1));
+
     /* Determine the camera directions */
     float3 ahead = normalize(target - pos);
     float3 right = normalize(cross(UP, ahead));
@@ -35,6 +37,6 @@ bool Camera::update(const f32 t) {
     tl = pos + 2.0f * ahead - ASPECT_RATIO * right + up;
     tr = pos + 2.0f * ahead + ASPECT_RATIO * right + up;
     bl = pos + 2.0f * ahead - ASPECT_RATIO * right - up;
-
+    
     return changed;
 }

@@ -17,7 +17,7 @@
 class Renderer : public TheApp {
    public:
     void init();
-    u32 trace(Ray& ray, const u32 x, const u32 y) const;
+    float4 trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const;
     void tick(f32 dt);
     void gui(f32 dt);
     void shutdown();
@@ -31,27 +31,27 @@ class Renderer : public TheApp {
 
     /* Insert a new color into the accumulator (returns the color to display) */
     inline float4 insert_accu(const u32 x, const u32 y, const float4& c) const {
-        return aces_approx(insert_accu_raw(x, y, c));
+        //return aces_approx(insert_accu_raw(x, y, c));
     }
 
     /* Insert a new color into the accumulator without tonemapping (returns the color to display) */
     inline float4 insert_accu_raw(const u32 x, const u32 y, const float4& c) const {
-        const float4 new_color = c;
-        const float4 acc_color = accu[x + y * WIN_WIDTH];
-        if (accu_reset) {
-            accu[x + y * WIN_WIDTH] = new_color;
-            return new_color;
-        }
-        const float4 color = new_color * (0.1f) + acc_color * (0.9f);
-        accu[x + y * WIN_WIDTH] = color;
-        return color;
+        //const float4 new_color = c;
+        //const float4 acc_color = accu[x + y * WIN_WIDTH];
+        //if (accu_reset) {
+        //    accu[x + y * WIN_WIDTH] = new_color;
+        //    return new_color;
+        //}
+        //const float4 color = new_color * (0.1f) + acc_color * (0.9f);
+        //accu[x + y * WIN_WIDTH] = color;
+        //return color;
     }
 
     /* Reset the accumulator */
     inline void reset_accu() {
-        accu_len = 1u, memset(accu, 0, (size_t)WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
-        frame = 0;
-        accu_reset = true;
+        //accu_len = 1u, memset(accu, 0, (size_t)WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+        //frame = 0;
+        //accu_reset = true;
     };
 
     int2 mousePos;
@@ -80,6 +80,7 @@ class Renderer : public TheApp {
 
     /* Accumulator */
     float4* accu = nullptr;
+    float4* prev_frame = nullptr;
     mutable u32 accu_len = 1u;
     mutable bool accu_reset = true;
 

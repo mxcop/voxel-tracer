@@ -79,6 +79,8 @@ void Renderer::init() {
     /* Create the accumulator */
     accu = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
     if (accu) memset(accu, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+    prev_frame = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+    if (prev_frame) memset(prev_frame, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
 
     bnoise = new BlueNoise();
     skydome = SkyDome("assets/kiara_1_dawn_8k.hdr");
@@ -136,13 +138,12 @@ void Renderer::init() {
     // texture = new Surface("assets/very-serious-test-image.png");
 }
 
-u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
+float4 Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
 #if USE_BVH
     const Bvh* volume = this->bvh;
 #endif
-    HitInfo hit = volume->intersect(ray);
+    hit = volume->intersect(ray);
 
-    float4 color = float4(0);
     float3 hit_pos = ray.origin + ray.dir * hit.depth + hit.normal * 0.00001f;
 
     /* Reflections */
@@ -172,6 +173,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         hit_pos = ray.origin + ray.dir * hit.depth /* + hit.normal * 0.000001f*/;
     }
 #endif
+    float4 color = float4(0, 0, 0, hit.depth);
 
 #if 0
     /* Textures */
@@ -207,17 +209,17 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         float4 dc;
         switch (dev::display_mode) {
             case dev::DM::ALBEDO:
-                return RGBF32_to_RGB8(&hit.albedo);
+                return hit.albedo;
             case dev::DM::NORMALS:
                 // dc = float4(hit.normal + 1.0f * 0.5f, 1.0f);
                 dc = float4(fmaxf(hit.normal, 0.0f), 1.0f);
-                return RGBF32_to_RGB8(&dc);
+                return dc;
             case dev::DM::DEPTH:
                 dc = float4(hit.depth / 16.0f, hit.depth / 16.0f, hit.depth / 16.0f, 1.0f);
-                return RGBF32_to_RGB8(&dc);
+                return dc;
             case dev::DM::PRIMARY_STEPS:
                 dc = float4(hit.steps / 64.0f, hit.steps / 64.0f, hit.steps / 64.0f, 1.0f);
-                return RGBF32_to_RGB8(&dc);
+                return dc;
         }
     }
 #endif
@@ -225,10 +227,8 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
     /* Skybox color if the ray missed */
     if (hit.depth >= BIG_F32) {
         color = skydome.sample_dir(ray.dir);
-
-        /* Update accumulator */
-        color = insert_accu(x, y, color);
-        return RGBF32_to_RGB8(&color);
+        color.w = BIG_F32;
+        return color;
     }
 
     const float3 hit_color = float3(hit.albedo);
@@ -261,21 +261,18 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
             const f32 pdf = dot(ambient_dir, hit.normal) * INVPI; /* (cos(a) / PI) */
             const float3 sample = skydome.sample_dir(ambient_dir);
             // const float3 sample = skydome.sample_voxel_normal(hit.normal);
-            ambient_c += clamp_color(sample / pdf, 6.0f);
+            ambient_c += clamp_color(sample / pdf, 8.0f);
         }
     }
     /* Divide by the number of samples */
-    color += hit_color * (ambient_c * (1.0f / SAMPLES) * 0.4f);
+    color += hit_color * (ambient_c * (1.0f / SAMPLES)) * 0.5f;
 
 #ifdef DEV
     /* Handle special display modes, for debugging */
     if (dev::display_mode == dev::DM::AMBIENT_STEPS) {
         float4 dc;
         dc = float4(al_steps / 64.0f, al_steps / 64.0f, al_steps / 64.0f, 1.0f);
-
-        /* Update accumulator */
-        dc = insert_accu_raw(x, y, dc);
-        return RGBF32_to_RGB8(&dc);
+        return dc;
     }
 #endif
 
@@ -311,7 +308,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
 #endif
 
         if (not in_shadow) {
-            const float3 sun_light = float3(0.4f);
+            const float3 sun_light = float3(0.5f);
             color += hit_color * sun_light * incidence;
         }
     }
@@ -322,9 +319,7 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
         float4 dc;
         dc = float4(dl_steps / 64.0f, dl_steps / 64.0f, dl_steps / 64.0f, 1.0f);
 
-        /* Update accumulator */
-        dc = insert_accu_raw(x, y, dc);
-        return RGBF32_to_RGB8(&dc);
+        return dc;
     }
 #endif
 
@@ -385,9 +380,8 @@ u32 Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
     }
 #endif
 
-    /* Update accumulator */
-    color = insert_accu(x, y, color);
-    return RGBF32_to_RGB8(&color);
+    color.w = hit.depth;
+    return color;
 }
 
 void Renderer::tick(f32 dt) {
@@ -483,10 +477,37 @@ void Renderer::tick(f32 dt) {
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
             Ray ray = camera.get_primary_ray(x, y);
-            u32 color = trace(ray, x, y);
-            screen->pixels[x + y * WIN_WIDTH] = color;
+
+            HitInfo hit;
+            const float4 color = trace(ray, hit, x, y);
+
+            /* Reproject */
+            float4 acc_color = color;
+            if (hit.depth < BIG_F32) {
+                const float2 prev_uv =
+                    camera.prev_pyramid.project(ray.origin + ray.dir * hit.depth);
+                if (prev_uv.x >= 0 && prev_uv.x <= 1 && prev_uv.y >= 0 && prev_uv.y <= 1) {
+                    const i32 px = static_cast<i32>(fminf((prev_uv.x * WIN_WIDTH) + 0.5f, WIN_WIDTH - 1));
+                    const i32 py = static_cast<i32>(fminf((prev_uv.y * WIN_HEIGHT) + 0.5f, WIN_HEIGHT - 1));
+                    
+                    acc_color = prev_frame[px + py * WIN_WIDTH];
+                }
+            }
+
+            const float4 new_color = (color * 0.1f) + (acc_color * 0.9f);
+            accu[x + y * WIN_WIDTH] = new_color;
+
+            const float4 c = aces_approx(new_color);
+            screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
         }
     }
+
+    // FLIP THE POINTERS !!!
+    /* Update the previous frame */
+    float4* temp = accu;
+    accu = prev_frame;
+    prev_frame = temp;
+    // memcpy(prev_frame, accu, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
 
     // for (i32 y = 0; y < WIN_HEIGHT / 12; y++) {
     //     for (i32 x = 0; x < WIN_WIDTH / 12; x++) {
@@ -553,9 +574,14 @@ void Renderer::tick(f32 dt) {
     accu_reset = false;
 
     /* Update the camera */
+    //const float2 old_uv = camera.prev_pyramid.project(float3(-3.0f, 2.5f - 0.05f * 3, -0.5f));
     if (camera.update(dt)) {
-        reset_accu();
+        // reset_accu();
     }
+    //const float2 new_uv = camera.prev_pyramid.project(float3(-3.0f, 2.5f - 0.05f * 3, -0.5f));
+    //if (old_uv.x != new_uv.x || old_uv.y != new_uv.y) {
+    //    printf("difference! (%f, %f)\n", (old_uv.x - new_uv.x) * WIN_WIDTH, (old_uv.y - new_uv.y) * WIN_HEIGHT);
+    //}
 
     /* No accu mode switch */
     static bool r_down = false;
