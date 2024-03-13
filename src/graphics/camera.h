@@ -30,12 +30,6 @@ struct Camera {
         return Ray(pos, normalize(ray_end - pos));
     }
 
-    inline float3 get_dir(const f32 u, const f32 v) const {
-        /* UV coordinates */
-        const float3 ray_end = tl + u * (tr - tl) + v * (bl - tl);
-        return normalize(ray_end - pos);
-    }
-
     /* Bundle of 4 x 3D vectors. */
     union QuadBundle {
         struct {

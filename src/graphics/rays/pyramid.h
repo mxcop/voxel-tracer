@@ -21,7 +21,7 @@ class Pyramid {
      * @param tr Frustum direction top right.
      * @param bl Frustum direction bottom left.
      */
-    Pyramid(const float3& o, float3 tl, float3 tr, float3 bl);
+    Pyramid(const float3& o, const float3 tl, const float3 tr, const float3 bl);
 
     /**
      * @brief Project a world point onto the pyramid view.

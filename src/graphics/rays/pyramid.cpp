@@ -1,7 +1,6 @@
-#include "precomp.h"
 #include "pyramid.h"
 
-Pyramid::Pyramid(const float3& o, float3 tl, float3 tr, float3 bl) {
+Pyramid::Pyramid(const float3& o, const float3 tl, const float3 tr, const float3 bl) {
     const float4 origin = float4(o);
 
     /* Left frustum plane */
