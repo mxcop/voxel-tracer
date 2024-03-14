@@ -91,7 +91,7 @@ void Renderer::init() {
 #endif
 
     bnoise = new BlueNoise();
-    skydome = SkyDome("assets/kiara_1_dawn_8k.hdr");
+    skydome = SkyDome("assets/kiara_1_dawn_4k.hdr");
 
     /* Create a voxel volume */
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
@@ -110,15 +110,20 @@ void Renderer::init() {
     shapes[1] =
         new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f), "assets/vox/crate-16h.vox");
     shapes[2] =
-        new OVoxelVolume(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
+        new OVoxelVolume(float3(1.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
 
     /* Robot arm */
     arm_vv[0] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-base-azimuth.vox");
     arm_vv[0]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 4.0f));
     arm_vv[1] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-base-altitude.vox");
     arm_vv[1]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 8.0f));
+#if ANGRY_MODE
+    arm_vv[2] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-altitude-angry.vox");
+    arm_vv[2]->set_pivot(float3(VOXEL * 8.0f, VOXEL * 4.0f, VOXEL * 4.0f));
+#else
     arm_vv[2] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-altitude.vox");
     arm_vv[2]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 4.0f));
+#endif
     arm_vv[3] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-hand.vox");
     arm_vv[3]->set_pivot(float3(VOXEL * 8.0f, VOXEL * 0.0f, VOXEL * 8.0f));
 
@@ -132,20 +137,23 @@ void Renderer::init() {
     shapes[6] = arm_vv[2];
     shapes[7] = arm_vv[3];
 
+    test_vv = new Sphere(float3(0, 3.0f - VOXEL * 24.0f, 0), VOXEL * 4.0f);
+    shapes[8] = test_vv;
+
     // shapes[6] = new Sphere(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), 0.5f);
     // shapes[3] = new AABB(float3(-4, -1, -4), float3(4, 0, 4), float3(1));
 
     bvh = new Bvh(BVH_SHAPES, shapes);
 
     /* Physics testing */
-    //test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.5f), float3(0, 10, 1.0f), 0.01f));
-    //test_plane_obj =
-    //    world.add_object(PhyObject(new BoxCollider(float3(-4, -1, -4), float3(4, 0, 4)), 0, 0));
+    // test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.5f), float3(0, 10, 1.0f),
+    // 0.01f)); test_plane_obj =
+    //     world.add_object(PhyObject(new BoxCollider(float3(-4, -1, -4), float3(4, 0, 4)), 0, 0));
 
     RobotBone bones[] = {RobotBone(float3(0, VOXEL * 3, 0), float3(0, 1, 0), 0.0f),
                          RobotBone(float3(0, 1, 0), float3(0, 0, 1), PI * 0.6f),
-                         RobotBone(float3(0, 1.5f - VOXEL * 3, 0), float3(0, 0, 1), PI * 0.6f),
-                         RobotBone(float3(0, 1, 0), float3(0, 1, 0), 0.0f)};
+                         RobotBone(float3(0, 1.5f - VOXEL * 3, 0), float3(0, 0, 1), PI * 0.8f),
+                         RobotBone(float3(0, VOXEL * 5, 0), float3(0, 1, 0), 0.0f)};
     arm = RobotArm(bones, 4);
 
 #else
@@ -411,6 +419,39 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
 
 inline float _lerp(const float a, const float b, const float t) { return a + t * (b - a); }
 
+// TODO: Move this stuff out of "renderer.cpp"
+/* Source : <https://www.youtube.com/watch?v=KPoeNZZ6H4s> */
+class SecondOrderDyn {
+    f32 xp, y, yd;
+    f32 k1, k2, k3;
+
+   public:
+    SecondOrderDyn(f32 f, const f32 z, const f32 r, const f32& x0) {
+        f = fmaxf(f, 0.01f);
+        k1 = z / (PI * f);
+        k2 = 1 / ((2 * PI * f) * (2 * PI * f));
+        k3 = r * z / (2 * PI * f);
+
+        xp = x0;
+        y = x0;
+        yd = 0;
+    }
+
+    f32 update(const f32 dt, const f32 x, const f32 xd) {
+        // const f32 xd = (x - xp) / dt;
+        const f32 k2_stable = fmaxf(k2, 1.1f * (dt * dt / 4 + dt * k1 / 2));
+        y = y + dt * yd;
+        yd = yd + dt * (x + k3 * xd - y - k1 * yd) / k2_stable;
+        return y;
+    }
+};
+
+constexpr f32 F = 0.15f;
+constexpr f32 Z = 0.5f;
+constexpr f32 R = 2.0f;
+static SecondOrderDyn dyn[4] = {SecondOrderDyn(F, Z, R, 0), SecondOrderDyn(F, Z, R, 0),
+                                SecondOrderDyn(F, Z, R, 0), SecondOrderDyn(F, Z, R, 0)};
+
 /**
  * @brief Called every frame.
  */
@@ -420,47 +461,50 @@ void Renderer::tick(f32 dt) {
     Timer t;
 
 #if USE_BVH
-    //world.step(dt);
-    //Transform& transform = test_obj->transform;
+    // world.step(dt);
+    // Transform& transform = test_obj->transform;
 
-    //static f32 time = 0;
-    //time += dt;
-    //if (time < 5) {
-    //    transform.position.y = 5.0f;
-    //    test_obj->velocity = 0;
-    //}
+    // static f32 time = 0;
+    // time += dt;
+    // if (time < 5) {
+    //     transform.position.y = 5.0f;
+    //     test_obj->velocity = 0;
+    // }
 
-    //if (transform.position.y < -10.0f) {
-    //    transform.position.y = 5.0f;
-    //    test_obj->velocity = 0;
-    //}
-    //test_vv->pos = transform.position;
-    //test_plane_vv->pos = test_plane_obj->transform.position;
+    // if (transform.position.y < -10.0f) {
+    //     transform.position.y = 5.0f;
+    //     test_obj->velocity = 0;
+    // }
+    // test_vv->pos = transform.position;
+    // test_plane_vv->pos = test_plane_obj->transform.position;
 
+    /* TEMP: Robot arm DEMO */
     static f32 angles[4] = {};
+    static f32 diffs[4] = {};
     for (u32 i = 0; i < arm.arm_len; i++) {
         RobotBone& bone = arm.arm[i];
 
         /* Set new goal */
-        if (abs(bone.angle - angles[i]) < 0.1f) {
+        if (abs(bone.angle - angles[i]) < 0.02f) {
             if (bone.limit > 0)
                 angles[i] = (RandomFloat() * 2 - 1) * bone.limit;
             else
-                angles[i] = RandomFloat() * TWOPI;
+                angles[i] = (RandomFloat() * 2 - 1) * PI;
         }
         /* Move to goal */
         else {
-            bone.angle = _lerp(bone.angle, angles[i], 0.1f);
-            // dt * 4.0f;
+            const f32 old_angle = bone.angle;
+            if (bone.limit > 0)
+                bone.angle = clamp(dyn[i].update(dt, angles[i], diffs[i]), -bone.limit, bone.limit);
+            else
+                bone.angle = dyn[i].update(dt, angles[i], diffs[i]);
+            diffs[i] = bone.angle - old_angle;
         }
     }
 
     float3 prev_point = float3(0, 3.0f, 0);
     quat rotation;
-    //arm_vv[0]->set_rotation(arm.arm[0].axis * arm.arm[0].angle);
-    //arm_vv[0]->set_position(arm.arm[0].offset);
     for (u32 i = 0; i < arm.arm_len; i++) {
-        // const RobotBone& prev_bone = arm.arm[i - 1];
         const RobotBone& bone = arm.arm[i];
 
         const quat bone_rot = quat::from_axis_angle(bone.axis, bone.angle);
@@ -472,6 +516,7 @@ void Renderer::tick(f32 dt) {
 
         prev_point = next_point;
     }
+    test_vv->pos = prev_point;
 
     // test_plane_vv->set_position(test_plane_obj->transform.position);
     // test_vv->set_position(transform.position);
@@ -548,14 +593,16 @@ void Renderer::gui(f32 dt) {
 
 #ifdef DEV
 #if USE_BVH
-    const f32 VOXEL = 1.0f / 20;
-    static float3 test_pivot = float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f);
-    static f32 test_angle = 1.0f;
-    if (ImGui::DragFloat3("Pivot", &test_pivot.x, VOXEL) ||
-        ImGui::DragFloat("Angle", &test_angle, 0.0174533f)) {
-        //arm_vv->set_pivot(test_pivot);
-        //arm_vv->set_rotation(float3(0, 0, test_angle));
-        bvh->build(BVH_SHAPES, shapes);
+    if (not dev::hide_devgui) {
+        ImGui::Begin("Second Order Dynamics");
+        static f32 _F = F, _Z = Z, _R = R;
+        if (ImGui::DragFloat("F", &_F, 0.01f) || ImGui::DragFloat("Z", &_Z, 0.01f) ||
+            ImGui::DragFloat("R", &_R, 0.01f)) {
+            for (u32 i = 0; i < 4; i++) {
+                dyn[i] = SecondOrderDyn(_F, _Z, _R, arm.arm[i].angle);
+            }
+        }
+        ImGui::End();
     }
 #endif
 

@@ -34,15 +34,15 @@ class SkyDome {
             return (angle);
     }
 
-    _declspec(noinline) float3 sample_dir(float3 dir) const {
+    float3 sample_dir(float3 dir) const {
         u32 u = floor(w * atan2_approx(dir.z, dir.x) * INV2PI - 0.5f);
         u32 v = floor(h * acosf(dir.y) * INVPI - 0.5f);
-        // u32 i = min(max(u + v * w, 0u), (u32)(w * h)); /* safety clamp */
-        u32 i = (u + v * w) % (w * h);
+        u32 i = min(u + v * w, (u32)(w * h)); /* safety clamp */
+        // u32 i = (u + v * w) % (w * h);
         return 0.65f * float3(sampler[i * 3], sampler[i * 3 + 1], sampler[i * 3 + 2]);
     }
 
-    _declspec(noinline) float3 sample_voxel_normal(float3 normal) const { 
+    float3 sample_voxel_normal(float3 normal) const { 
         if (normal.x == 1) return int_samples[0];
         if (normal.y == 1) return int_samples[1];
         if (normal.z == 1) return int_samples[2];

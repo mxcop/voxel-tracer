@@ -18,7 +18,10 @@
 /* Quite expensive! */
 #define DENOISE 0
 
-constexpr u32 BVH_SHAPES = 8;
+/* What happened?? */
+#define ANGRY_MODE 0
+
+constexpr u32 BVH_SHAPES = 9;
 
 struct TraceResult {
     float4 albedo = 0, irradiance = 0;
