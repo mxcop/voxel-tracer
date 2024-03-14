@@ -85,8 +85,8 @@ class OVoxelVolume : public Traceable {
     float3 center() const override;
     HitInfo intersect(const Ray& ray) const override;
 
-    void set_pivot(const float3 pivot) { this->pivot = pivot; };
-    void set_rotation(const float3& rot);
+    void set_pivot(const float3 pivot) { bb.pivot = pivot, this->pivot = pivot; };
+    void set_rotation(const quat& rot);
     void set_position(const float3& pos);
 
     /**

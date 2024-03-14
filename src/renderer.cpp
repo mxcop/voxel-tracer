@@ -97,47 +97,56 @@ void Renderer::init() {
     // volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
     // volume = new BrickVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #if USE_BVH
-    test_plane_vv = new Sphere(
-        float3(0.0f, 10.0f, 0.0f),
-        0.25f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
-    shapes[0] = test_plane_vv;
-    shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
-    // test_vv = new OVoxelVolume(float3(2.0f, 2.5f, -0.5f), int3(32), 8);
-    test_vv = new Sphere(
-        float3(0.0f, 10.0f, 0.0f),
-        1.5f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
-    // test_vv->set_rotation(normalize(RandomFloat3()) * TWOPI);
-    shapes[2] = test_vv;
-    // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
+    // test_plane_vv = new Sphere(
+    //     float3(0.0f, 10.0f, 0.0f),
+    //     0.25f);  // new OVoxelVolume(float3(0.0f, 10.0f, 0.0f), "assets/vox/crate-16.vox");
+    //  shapes[0] = test_plane_vv;
+    //  shapes[1] = new OBB(float3(-0.5f, 2.5f, -0.5f), float3(3), float3(0, 0, 1), 1.0f);
+
     const f32 VOXEL = 1.0f / 20.0f;
-    auto arm1 = new OVoxelVolume(float3(-4.0f, 2.5f, -0.5f), "assets/vox/robot-arm.vox");
-    arm_vv =
-        new OVoxelVolume(float3(-4.0f, 2.5f + VOXEL * 20.0f, -0.5f), "assets/vox/robot-arm.vox");
-    arm1->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
-    arm1->set_rotation(float3(0));
-    arm_vv->set_pivot(float3(VOXEL * 4.0f, VOXEL * 3.0f, VOXEL * 4.0f));
-    arm_vv->set_rotation(float3(0, 0, 1));
-    shapes[1] = arm1;
-    // shapes[2] = arm_vv;
-    shapes[3] =
-        new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f), "assets/vox/robot-arm-base.vox");
-    // shapes[3] = new OVoxelVolume(float3(-4.0f, 2.5f - VOXEL * 2, -0.5f),
-    // "assets/vox/crate-16.vox");
 
-    shapes[4] = new OVoxelVolume(float3(-3.0f, 2.5f + VOXEL * 6, -0.5f), "assets/vox/crate-10.vox");
-    shapes[5] =
+    /* Crates */
+    shapes[0] = new OVoxelVolume(float3(-3.0f, 2.5f + VOXEL * 6, -0.5f), "assets/vox/crate-10.vox");
+    shapes[1] =
         new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f), "assets/vox/crate-16h.vox");
-    shapes[6] =
+    shapes[2] =
         new OVoxelVolume(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
-    // shapes[6] = new Sphere(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), 0.5f);
-    shapes[3] = new AABB(float3(-4, -1, -4), float3(4, 0, 4), float3(1));
 
-    bvh = new Bvh(7, shapes);
+    /* Robot arm */
+    arm_vv[0] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-base-azimuth.vox");
+    arm_vv[0]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 4.0f));
+    arm_vv[1] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-base-altitude.vox");
+    arm_vv[1]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 8.0f));
+    arm_vv[2] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-altitude.vox");
+    arm_vv[2]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 4.0f));
+    arm_vv[3] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-hand.vox");
+    arm_vv[3]->set_pivot(float3(VOXEL * 8.0f, VOXEL * 0.0f, VOXEL * 8.0f));
+
+    auto* base = new OVoxelVolume(0, "assets/vox/robot-demo/arm-base.vox");
+    base->set_pivot(float3(VOXEL * 8.0f, VOXEL * 4.0f, VOXEL * 8.0f));
+    base->set_position(float3(0, 3.0f - VOXEL * 6.0f, 0));
+    base->set_rotation(quat::from_axis_angle(float3(0, 1, 0), PI));
+    shapes[3] = base;
+    shapes[4] = arm_vv[0];
+    shapes[5] = arm_vv[1];
+    shapes[6] = arm_vv[2];
+    shapes[7] = arm_vv[3];
+
+    // shapes[6] = new Sphere(float3(-3.0f + VOXEL * 17, 2.5f, -0.5f), 0.5f);
+    // shapes[3] = new AABB(float3(-4, -1, -4), float3(4, 0, 4), float3(1));
+
+    bvh = new Bvh(BVH_SHAPES, shapes);
 
     /* Physics testing */
-    test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.5f), float3(0, 10, 1.0f), 0.01f));
-    test_plane_obj =
-        world.add_object(PhyObject(new BoxCollider(float3(-4, -1, -4), float3(4, 0, 4)), 0, 0));
+    //test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.5f), float3(0, 10, 1.0f), 0.01f));
+    //test_plane_obj =
+    //    world.add_object(PhyObject(new BoxCollider(float3(-4, -1, -4), float3(4, 0, 4)), 0, 0));
+
+    RobotBone bones[] = {RobotBone(float3(0, VOXEL * 3, 0), float3(0, 1, 0), 0.0f),
+                         RobotBone(float3(0, 1, 0), float3(0, 0, 1), PI * 0.6f),
+                         RobotBone(float3(0, 1.5f - VOXEL * 3, 0), float3(0, 0, 1), PI * 0.6f),
+                         RobotBone(float3(0, 1, 0), float3(0, 1, 0), 0.0f)};
+    arm = RobotArm(bones, 4);
 
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
@@ -400,6 +409,8 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
     return result;
 }
 
+inline float _lerp(const float a, const float b, const float t) { return a + t * (b - a); }
+
 /**
  * @brief Called every frame.
  */
@@ -409,26 +420,62 @@ void Renderer::tick(f32 dt) {
     Timer t;
 
 #if USE_BVH
-    world.step(dt);
-    Transform& transform = test_obj->transform;
+    //world.step(dt);
+    //Transform& transform = test_obj->transform;
 
-    static f32 time = 0;
-    time += dt;
-    if (time < 5) {
-        transform.position.y = 5.0f;
-        test_obj->velocity = 0;
+    //static f32 time = 0;
+    //time += dt;
+    //if (time < 5) {
+    //    transform.position.y = 5.0f;
+    //    test_obj->velocity = 0;
+    //}
+
+    //if (transform.position.y < -10.0f) {
+    //    transform.position.y = 5.0f;
+    //    test_obj->velocity = 0;
+    //}
+    //test_vv->pos = transform.position;
+    //test_plane_vv->pos = test_plane_obj->transform.position;
+
+    static f32 angles[4] = {};
+    for (u32 i = 0; i < arm.arm_len; i++) {
+        RobotBone& bone = arm.arm[i];
+
+        /* Set new goal */
+        if (abs(bone.angle - angles[i]) < 0.1f) {
+            if (bone.limit > 0)
+                angles[i] = (RandomFloat() * 2 - 1) * bone.limit;
+            else
+                angles[i] = RandomFloat() * TWOPI;
+        }
+        /* Move to goal */
+        else {
+            bone.angle = _lerp(bone.angle, angles[i], 0.1f);
+            // dt * 4.0f;
+        }
     }
 
-    if (transform.position.y < -10.0f) {
-        transform.position.y = 5.0f;
-        test_obj->velocity = 0;
+    float3 prev_point = float3(0, 3.0f, 0);
+    quat rotation;
+    //arm_vv[0]->set_rotation(arm.arm[0].axis * arm.arm[0].angle);
+    //arm_vv[0]->set_position(arm.arm[0].offset);
+    for (u32 i = 0; i < arm.arm_len; i++) {
+        // const RobotBone& prev_bone = arm.arm[i - 1];
+        const RobotBone& bone = arm.arm[i];
+
+        const quat bone_rot = quat::from_axis_angle(bone.axis, bone.angle);
+        rotation = rotation * bone_rot;
+        const float3 next_point = prev_point + rotation.rotateVector(bone.offset);
+
+        arm_vv[i]->set_rotation(rotation);
+        arm_vv[i]->set_position(prev_point);
+
+        prev_point = next_point;
     }
-    test_vv->pos = transform.position;
-    test_plane_vv->pos = test_plane_obj->transform.position;
 
     // test_plane_vv->set_position(test_plane_obj->transform.position);
     // test_vv->set_position(transform.position);
-    bvh->build(7, shapes);
+    bvh->build(BVH_SHAPES, shapes);
     // reset_accu();
 #endif
 
@@ -441,7 +488,8 @@ void Renderer::tick(f32 dt) {
             const TraceResult r = trace(ray, hit, x, y);
 
             if (hit.depth >= BIG_F32) {
-                const float4 c = aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(1.0f, hit.depth)));
+                const float4 c =
+                    aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(1.0f, hit.depth)));
                 albedo_buf[x + y * WIN_WIDTH] = r.albedo * 1.0f;
                 screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
                 continue;
@@ -458,7 +506,8 @@ void Renderer::tick(f32 dt) {
             }
 
             /* Accumulate and reproject */
-            const float4 c = aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(r.irradiance, hit.depth)));
+            const float4 c =
+                aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(r.irradiance, hit.depth)));
             albedo_buf[x + y * WIN_WIDTH] = r.albedo;
             screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
         }
@@ -504,9 +553,9 @@ void Renderer::gui(f32 dt) {
     static f32 test_angle = 1.0f;
     if (ImGui::DragFloat3("Pivot", &test_pivot.x, VOXEL) ||
         ImGui::DragFloat("Angle", &test_angle, 0.0174533f)) {
-        arm_vv->set_pivot(test_pivot);
-        arm_vv->set_rotation(float3(0, 0, test_angle));
-        bvh->build(7, shapes);
+        //arm_vv->set_pivot(test_pivot);
+        //arm_vv->set_rotation(float3(0, 0, test_angle));
+        bvh->build(BVH_SHAPES, shapes);
     }
 #endif
 

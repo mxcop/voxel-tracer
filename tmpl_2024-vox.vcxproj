@@ -183,6 +183,7 @@
     <ClCompile Include="src\engine\physics\collision\collision.cpp" />
     <ClCompile Include="src\engine\physics\collision\gjk.cpp" />
     <ClCompile Include="src\engine\physics\world.cpp" />
+    <ClCompile Include="src\game\robot-arm.cpp" />
     <ClCompile Include="src\graphics\bvh.cpp" />
     <ClCompile Include="src\graphics\camera.cpp" />
     <ClCompile Include="src\graphics\lighting\sphere-light.cpp" />
@@ -228,6 +229,7 @@
     <ClInclude Include="src\engine\physics\object.h" />
     <ClInclude Include="src\engine\physics\transform.h" />
     <ClInclude Include="src\engine\physics\world.h" />
+    <ClInclude Include="src\game\robot-arm.h" />
     <ClInclude Include="src\graphics\bvh.h" />
     <ClInclude Include="src\graphics\camera.h" />
     <ClInclude Include="src\graphics\light.h" />

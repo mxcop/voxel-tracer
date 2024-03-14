@@ -43,7 +43,7 @@ struct ALIGN( 8 ) uint2
 struct ALIGN( 8 ) float2
 {
 	float2() = default;
-	float2( const float a, const float b ) : x( a ), y( b ) {}
+	constexpr float2( const float a, const float b ) : x( a ), y( b ) {}
 	float2( const float a ) : x( a ), y( a ) {}
 	float2( const int2 a ) : x( (float)a.x ), y( (float)a.y ) {}
 	union { struct { float x, y; }; float cell[2]; };
@@ -551,6 +551,7 @@ inline float3 floorf( const float3& v ) { return make_float3( floorf( v.x ), flo
 inline float4 floorf( const float4& v ) { return make_float4( floorf( v.x ), floorf( v.y ), floorf( v.z ), floorf( v.w ) ); }
 
 inline int3 floori(const float3& v) { return make_int3(floorf(v.x), floorf(v.y), floorf(v.z)); }
+inline int2 floori(const float2& v) { return make_int2(floorf(v.x), floorf(v.y)); }
 inline uint3 flooru(const float3& v) { return make_uint3(floorf(v.x), floorf(v.y), floorf(v.z)); }
 
 inline float2 ceilf( const float2& v ) { return make_float2( ceilf( v.x ), ceilf( v.y ) ); }
@@ -889,6 +890,13 @@ public:
 		const float s = sinf( theta / 2 );
 		x = axis.x * s, y = axis.y * s, z = axis.z * s;
 	}
+    static quat from_axis_angle(const float3& axis, float theta) {
+        quat r;
+        r.w = cosf(theta / 2);
+        const float s = sinf(theta / 2);
+        r.x = axis.x * s, r.y = axis.y * s, r.z = axis.z * s;
+        return r;
+    }
 	void fromMatrix( const mat4& m )
 	{
 		float tr = m.Trace3(), S;
