@@ -173,6 +173,9 @@ void main()
 #endif
 	// finalize app
 	app->screen = screen;
+#ifdef DEV
+    dev::db_screen = new Surface(WIN_WIDTH, WIN_HEIGHT);
+#endif
 	app->init();
 	// prep imgui
 	ImGui::CreateContext();
@@ -320,6 +323,11 @@ void main()
 		// send the rendering result to the screen using OpenGL
 		if (frameNr++ > 1)
 		{
+#ifdef DEV
+            // apply the debug screen (if "DEV" is defined)
+            dev::db_screen->ApplyTo(app->screen);
+            dev::db_screen->Clear(0);
+#endif
 			// draw template application output
 			if (app->screen) renderTarget->CopyFrom( app->screen );
 			shader->Bind();

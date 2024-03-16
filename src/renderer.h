@@ -55,8 +55,8 @@ class Renderer : public TheApp {
         if (c.w < BIG_F32) {
             const float2 prev_uv = camera.prev_pyramid.project(ray.origin + ray.dir * c.w);
 
-            constexpr f32 MAX_U = 1.0f - (1.0f / WIN_WIDTH);
-            constexpr f32 MAX_V = 1.0f - (1.0f / WIN_HEIGHT);
+            constexpr f32 MAX_U = 1.0f - (1.0f / WIN_WIDTH) * 2;
+            constexpr f32 MAX_V = 1.0f - (1.0f / WIN_HEIGHT) * 2;
 
             if (prev_uv.x > 0 && prev_uv.x < MAX_U && prev_uv.y > 0 && prev_uv.y < MAX_V) {
                 /* Bilinear Sampling */

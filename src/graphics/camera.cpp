@@ -4,13 +4,13 @@ f32 Camera::update(const f32 t) {
     if (not WindowHasFocus()) return false;
     f32 speed = 1.5f * t;
 
-    /* Save the current view pyramid */
-    prev_pyramid = Pyramid(pos, tl - pos, tr - pos, bl - pos);
-
     /* Determine the camera directions */
     float3 ahead = normalize(target - pos);
     float3 right = normalize(cross(UP, ahead));
     float3 up = normalize(cross(ahead, right));
+
+    /* Save the current view pyramid */
+    prev_pyramid = Pyramid(pos, ahead, tl - pos, tr - pos, bl - pos);
 
     bool changed = false;
     /* Apply any user inputs */

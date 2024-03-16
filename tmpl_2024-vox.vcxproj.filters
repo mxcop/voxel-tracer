@@ -56,6 +56,7 @@
     <ClCompile Include="src\engine\physics\collision\gjk.cpp" />
     <ClCompile Include="src\graphics\rays\pyramid.cpp" />
     <ClCompile Include="src\game\robot-arm.cpp" />
+    <ClCompile Include="src\dev\debug.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\renderer.h" />
@@ -139,6 +140,7 @@
     <ClInclude Include="src\graphics\rays\pyramid.h" />
     <ClInclude Include="src\graphics\noise\gaussian.h" />
     <ClInclude Include="src\game\robot-arm.h" />
+    <ClInclude Include="src\dev\debug.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

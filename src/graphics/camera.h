@@ -19,7 +19,7 @@ struct Camera {
         tl = float3(-ASPECT_RATIO, 1, 0);
         tr = float3(ASPECT_RATIO, 1, 0);
         bl = float3(-ASPECT_RATIO, -1, 0);
-        prev_pyramid = Pyramid(pos, tl, tr, bl);
+        prev_pyramid = Pyramid(pos, normalize(target - pos), tl, tr, bl);
     }
 
     /* Get a new primary ray from an X and Y pixel coordinate. */

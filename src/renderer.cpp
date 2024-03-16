@@ -1,10 +1,10 @@
-#include <functional>
-
 #include "graphics/lighting/sample.h"
-#include "dev/gui.h"
 #include "graphics/rays/frustum.h"
 #include "graphics/primitives/basic/sphere.h"
 #include <graphics/noise/gaussian.h>
+
+#include "dev/gui.h"
+#include "dev/debug.h"
 
 u32 HSBtoRGB(f32 h, f32 s, f32 v) {
     assert(-360 <= h && h <= 360 && "h must be within [-360; 360]");
@@ -76,6 +76,11 @@ void Renderer::init() {
         fread(&camera, 1, sizeof(Camera), f);
         fclose(f);
     }
+
+#ifdef DEV
+    /* Assign the main camera */
+    dev::main_camera = &camera;
+#endif
 
     /* Create the accumulator */
     accu = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
@@ -584,6 +589,9 @@ void Renderer::tick(f32 dt) {
 
     /* Update the camera */
     depth_delta = camera.update(dt);
+
+    // db::draw_line(0, 1);
+    db::draw_aabb(0, 1);
 }
 
 void Renderer::gui(f32 dt) {

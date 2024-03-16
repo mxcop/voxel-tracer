@@ -175,6 +175,16 @@ void Surface::CopyTo( Surface* d, int x, int y )
 	}
 }
 
+void Surface::ApplyTo(Surface* d) {
+    uint* dst = d->pixels;
+    uint* src = pixels;
+
+	/* DANGER: this assumes both surfaces are the same size! */
+	for (size_t i = 0; i < width * height; i++) {
+        if (src[i] & 0xFF000000) dst[i] = src[i];
+	}
+}
+
 void Surface::SetChar( int c, const char* c1, const char* c2, const char* c3, const char* c4, const char* c5 )
 {
 	strcpy( font[c][0], c1 );

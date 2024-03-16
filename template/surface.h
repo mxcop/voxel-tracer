@@ -64,6 +64,7 @@ public:
 	void Plot( int x, int y, uint c );
 	void LoadFromFile( const char* file );
 	void CopyTo( Surface* dst, int x, int y );
+    void ApplyTo( Surface* dst );
 	void Box( int x1, int y1, int x2, int y2, uint color );
 	void Bar( int x1, int y1, int x2, int y2, uint color );
 	// attributes

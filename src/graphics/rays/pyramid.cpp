@@ -1,6 +1,7 @@
 #include "pyramid.h"
 
-Pyramid::Pyramid(const float3& o, const float3 tl, const float3 tr, const float3 bl) {
+Pyramid::Pyramid(const float3& o, const float3 f, const float3 tl, const float3 tr,
+                 const float3 bl) {
     const float4 origin = float4(o);
 
     /* Left frustum plane */
@@ -19,6 +20,9 @@ Pyramid::Pyramid(const float3& o, const float3 tl, const float3 tr, const float3
     /* Bottom frustum plane */
     planes[3].normal = normalize(cross(br, bl));
     planes[3].normal.w = -dot(planes[3].normal, origin);
+
+    forward = f;
+    forward.w = -dot(forward, origin);
 }
 
 float2 Pyramid::project(const float3& point) const {
@@ -35,4 +39,13 @@ float2 Pyramid::project(const float3& point) const {
     const f32 v = d3 / (d3 + d4);
 
     return float2(u, v);
+}
+
+float2 Pyramid::safe_project(const float3& point) const {
+    const float4 p = float4(point, 1);
+
+    /* Exit if the point is behind the camera */
+    if (dot(forward, p) < 0) return 100'000.0f;
+
+    return project(point);
 }

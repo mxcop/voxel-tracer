@@ -177,6 +177,7 @@
     <ClCompile Include="lib\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="lib\imgui\imgui_tables.cpp" />
     <ClCompile Include="lib\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\dev\debug.cpp" />
     <ClCompile Include="src\dev\dev.cpp" />
     <ClCompile Include="src\dev\gui.cpp" />
     <ClCompile Include="src\engine\physics\collision\colliders.cpp" />
@@ -219,6 +220,7 @@
     <ClInclude Include="lib\imgui\imstb_textedit.h" />
     <ClInclude Include="lib\imgui\imstb_truetype.h" />
     <ClInclude Include="lib\ogt\ogt_vox.h" />
+    <ClInclude Include="src\dev\debug.h" />
     <ClInclude Include="src\dev\dev.h" />
     <ClInclude Include="src\dev\gui.h" />
     <ClInclude Include="src\engine\datastruct\pool.h" />
