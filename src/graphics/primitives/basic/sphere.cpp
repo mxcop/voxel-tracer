@@ -28,6 +28,6 @@ HitInfo Sphere::intersect(const Ray& ray) const {
     const float3 p = (ray.origin + ray.dir * tmin);
     hit.normal = normalize(p - pos);
     // TEMP: for fun.
-    // hit.albedo = hit.normal + 1.0f * 0.5f; 
+    hit.albedo = hit.normal + 1.0f * 0.5f; 
     return hit;
 }

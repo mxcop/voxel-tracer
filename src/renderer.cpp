@@ -122,13 +122,8 @@ void Renderer::init() {
     arm_vv[0]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 4.0f));
     arm_vv[1] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-base-altitude.vox");
     arm_vv[1]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 8.0f));
-#if ANGRY_MODE
-    arm_vv[2] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-altitude-angry.vox");
-    arm_vv[2]->set_pivot(float3(VOXEL * 8.0f, VOXEL * 4.0f, VOXEL * 4.0f));
-#else
     arm_vv[2] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-altitude.vox");
     arm_vv[2]->set_pivot(float3(VOXEL * 4.0f, VOXEL * 4.0f, VOXEL * 4.0f));
-#endif
     arm_vv[3] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-hand.vox");
     arm_vv[3]->set_pivot(float3(VOXEL * 8.0f, VOXEL * 0.0f, VOXEL * 8.0f));
 
@@ -591,7 +586,7 @@ void Renderer::tick(f32 dt) {
     depth_delta = camera.update(dt);
 
     // db::draw_line(0, 1);
-    db::draw_aabb(0, 1);
+    // db::draw_aabb(0, 1);
 }
 
 void Renderer::gui(f32 dt) {
@@ -663,4 +658,76 @@ void Renderer::MouseDown(int button) {
     if (button == 0) {
         // volume->place_voxel(camera.get_primary_ray(mousePos.x, mousePos.y));
     }
+}
+
+/**
+ * @brief Reproject onto the current frame and accumulate. (with tonemapping)
+ * @return The color to display on screen for this pixel.
+ */
+inline float4 Renderer::insert_accu(const u32 x, const u32 y, const Ray& ray,
+                                    const float4& c) const {
+    return aces_approx(insert_accu_raw(x, y, ray, c));
+}
+
+/**
+ * @brief Reproject onto the current frame and accumulate. (without tonemapping)
+ * @return The color to display on screen for this pixel.
+ */
+inline float4 Renderer::insert_accu_raw(const u32 x, const u32 y, const Ray& ray,
+                                        const float4& c) const {
+#ifdef DEV
+    if (not dev::use_projection) return c;
+#endif
+
+    /* Reproject (color.w is the depth) */
+    float4 acc_color = c;
+    f32 confidence = 0.9f;
+    if (c.w < BIG_F32) {
+        const float2 prev_uv = camera.prev_pyramid.project(ray.origin + ray.dir * c.w);
+
+        constexpr f32 MAX_U = 1.0f - (1.0f / WIN_WIDTH) * 2;
+        constexpr f32 MAX_V = 1.0f - (1.0f / WIN_HEIGHT) * 2;
+
+        if (prev_uv.x > 0 && prev_uv.x < MAX_U && prev_uv.y > 0 && prev_uv.y < MAX_V) {
+            /* Bilinear Sampling */
+            const float2 center = prev_uv * WIN_SIZE + 0.5f;
+
+            /* Sample points */
+            const float2 tl_p = prev_uv * WIN_SIZE;
+            const float2 tr_p = prev_uv * WIN_SIZE + float2(1, 0);
+            const float2 bl_p = prev_uv * WIN_SIZE + float2(0, 1);
+            const float2 br_p = prev_uv * WIN_SIZE + float2(1, 1);
+
+            /* Center pixel */
+            const float2 center_p = floorf(center + 0.5f);
+
+            /* Sample weights */
+            const f32 tl_w = fabs((tl_p.x - center_p.x) * (tl_p.y - center_p.y));
+            const f32 tr_w = fabs((tr_p.x - center_p.x) * (tr_p.y - center_p.y));
+            const f32 bl_w = fabs((bl_p.x - center_p.x) * (bl_p.y - center_p.y));
+            const f32 br_w = 1.0f - (tl_w + tr_w + bl_w);
+
+            /* Fetch the samples */
+            const float3 tl_s = prev_frame[(i32)tl_p.x + (i32)tl_p.y * WIN_WIDTH] * tl_w;
+            const float3 tr_s = prev_frame[(i32)tr_p.x + (i32)tr_p.y * WIN_WIDTH] * tr_w;
+            const float3 bl_s = prev_frame[(i32)bl_p.x + (i32)bl_p.y * WIN_WIDTH] * bl_w;
+            const float3 br_s = prev_frame[(i32)br_p.x + (i32)br_p.y * WIN_WIDTH] * br_w;
+
+            /* Merge the samples, and use the center depth value */
+            const f32 depth = prev_frame[(i32)center.x + (i32)center.y * WIN_WIDTH].w;
+            const float4 sample = float4(tl_s + tr_s + bl_s + br_s, depth);
+
+            /* Depth rejection (take into account camera movement "depth_delta") */
+            const f32 depth_diff = fabs(sample.w - (c.w + depth_delta));
+            if (depth_diff < 0.2f) {
+                confidence = max(confidence - depth_diff * 3.0f, 0.0f);
+                acc_color = sample;
+            }
+        }
+    }
+
+    /* Merge */
+    const float4 color = (c * (1.0f - confidence)) + (acc_color * confidence);
+    accu[x + y * WIN_WIDTH] = float4(color.x, color.y, color.z, c.w);
+    return color;
 }

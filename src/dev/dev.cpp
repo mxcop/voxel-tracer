@@ -4,6 +4,7 @@
 
 namespace dev {
 bool hide_devgui = false;
+bool use_projection = true;
 Renderer* renderer = nullptr;
 Camera* main_camera = nullptr;
 Tmpl8::Surface* db_screen = nullptr;

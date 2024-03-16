@@ -14,6 +14,8 @@ namespace dev {
 /* Dev GUI switch */
 extern bool hide_devgui;
 
+extern bool use_projection;
+
 /* Renderer, Camera, and Debug Screen */
 extern Renderer* renderer;
 extern Camera* main_camera;

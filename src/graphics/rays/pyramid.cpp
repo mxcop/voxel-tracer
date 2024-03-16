@@ -4,23 +4,24 @@ Pyramid::Pyramid(const float3& o, const float3 f, const float3 tl, const float3 
                  const float3 bl) {
     const float4 origin = float4(o);
 
-    /* Left frustum plane */
+    /* Left pyramid plane */
     planes[0].normal = normalize(cross(bl, tl));
     planes[0].normal.w = -dot(planes[0].normal, origin);
 
-    /* Right frustum plane */
+    /* Right pyramid plane */
     const float3 br = tr - (tl - bl);
     planes[1].normal = normalize(cross(tr, br));
     planes[1].normal.w = -dot(planes[1].normal, origin);
 
-    /* Top frustum plane */
+    /* Top pyramid plane */
     planes[2].normal = normalize(cross(tl, tr));
     planes[2].normal.w = -dot(planes[2].normal, origin);
 
-    /* Bottom frustum plane */
+    /* Bottom pyramid plane */
     planes[3].normal = normalize(cross(br, bl));
     planes[3].normal.w = -dot(planes[3].normal, origin);
 
+    /* Forward plane */
     forward = f;
     forward.w = -dot(forward, origin);
 }
