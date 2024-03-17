@@ -114,8 +114,7 @@ void Renderer::init() {
     shapes[0] = new OVoxelVolume(float3(-3.0f, 2.5f + VOXEL * 6, -0.5f), "assets/vox/crate-10.vox");
     shapes[1] =
         new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f), "assets/vox/crate-16h.vox");
-    shapes[2] =
-        new OVoxelVolume(float3(1.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
+    shapes[2] = new OVoxelVolume(float3(1.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
 
     /* Robot arm */
     arm_vv[0] = new OVoxelVolume(0, "assets/vox/robot-demo/arm-base-azimuth.vox");
@@ -584,9 +583,6 @@ void Renderer::tick(f32 dt) {
 
     /* Update the camera */
     depth_delta = camera.update(dt);
-
-    // db::draw_line(0, 1);
-    // db::draw_aabb(0, 1);
 }
 
 void Renderer::gui(f32 dt) {
@@ -633,6 +629,30 @@ void Renderer::gui(f32 dt) {
         tilde_down = false;
     }
 #endif
+
+    /* TEMP: Draw a cube */
+    {
+        const float3 point = 0, size = 1;
+        static f32 time = 0;
+        time += dt;
+        const quat rot = quat::from_axis_angle(normalize({1, 1, 0}), time);
+        db::draw_obb(point, size, rot);
+
+        /* Cube planes */
+        const float3 planes[6] = {
+            {0, 1, 0},  /* top */
+            {0, -1, 0}, /* bottom */
+            {1, 0, 0},  /* right */
+            {-1, 0, 0}, /* left */
+            {0, 0, 1},  /* forward */
+            {0, 0, -1}, /* backward */
+        };
+        for (u32 i = 0; i < 6; i++) {
+            const float3 plane = rot.rotateVector(planes[i] * (size * 0.5f));
+            const float3 normal = normalize(plane);
+            db::draw_normal(plane, normal, 0xFFFFFF00);
+        }
+    }
 }
 
 void Renderer::shutdown() {
