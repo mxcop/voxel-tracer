@@ -1,7 +1,8 @@
 #include "graphics/lighting/sample.h"
 #include "graphics/rays/frustum.h"
 #include "graphics/primitives/basic/sphere.h"
-#include <graphics/noise/gaussian.h>
+#include "graphics/noise/gaussian.h"
+#include "graphics/lighting/materials.h"
 
 #include "dev/gui.h"
 #include "dev/debug.h"
@@ -109,9 +110,10 @@ void Renderer::init() {
 
     /* Crates */
     shapes[0] = new OVoxelVolume({0, 0, 0}, "assets/vox/material-test.vox");
-    //shapes[1] =
-    //    new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f), "assets/vox/crate-16h.vox");
-    //shapes[2] = new OVoxelVolume(float3(1.0f + VOXEL * 17, 2.5f, -0.5f), "assets/vox/crate-16.vox");
+    // shapes[1] =
+    //     new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f), "assets/vox/crate-16h.vox");
+    // shapes[2] = new OVoxelVolume(float3(1.0f + VOXEL * 17, 2.5f, -0.5f),
+    // "assets/vox/crate-16.vox");
 
     bvh = new Bvh(BVH_SHAPES, shapes);
 
@@ -119,7 +121,7 @@ void Renderer::init() {
     // test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.5f), float3(0, 10, 1.0f),
     // 0.01f)); test_plane_obj =
     //     world.add_object(PhyObject(new BoxCollider(float3(-4, -1, -4), float3(4, 0, 4)), 0, 0));
-    
+
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
 #endif
@@ -129,6 +131,14 @@ void Renderer::init() {
 #endif
 }
 
+/** @brief Sample a 3D blue noise vector. */
+static float3 get_3d_noise(const BlueNoise* bnoise, const u32 x, const u32 y, const u32 frame) {
+    const float3 raw_noise = bnoise->sample_3d(x, y);
+    return {(f32)fmod(raw_noise.x + R2X * (f64)frame, 1.0),
+            (f32)fmod(raw_noise.y + R2Y * (f64)frame, 1.0),
+            (f32)fmod(raw_noise.z + R2Z * (f64)frame, 1.0)};
+}
+
 TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
     TraceResult result;
 #if USE_BVH
@@ -136,44 +146,83 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
 #endif
     hit = volume->intersect(ray);
 
-    float3 hit_pos = ray.origin + ray.dir * hit.depth + hit.normal * 0.00001f;
+    float3 hit_pos;
 
-    /* Reflections */
-#if 1
-    constexpr u32 MAX_BOUNCES = 8;
-    /* TODO: also keep looping if the material hit is transmissive */
-    for (u32 i = 0; i < MAX_BOUNCES && hit.albedo.w > 0.0f; ++i) {
-        /* TODO: distingus between glass and mirror! */
-        /* Blue noise + R2 (cosine weighted distribution) */
-        float3 raw_noise = bnoise->sample_3d(x, y);
-        float3 quasi_noise;
-        quasi_noise.x = fmod(raw_noise.x + R2X * (f32)frame, 1.0f);
-        quasi_noise.y = fmod(raw_noise.y + R2Y * (f32)frame, 1.0f);
-        quasi_noise.z = fmod(raw_noise.z + R2Z * (f32)frame, 1.0f);
-        const float3 jitter = (quasi_noise * hit.albedo.w - (hit.albedo.w * 0.5f));
-        const float3 reflect_dir = normalize(reflect(ray.dir, hit.normal) + jitter);
-
-        ray = Ray(hit_pos, reflect_dir);
-        const u32 steps = hit.steps;
-        hit = volume->intersect(ray);
-        hit.steps += steps; /* <- carry step count */
-
-        /* Break if the ray missed */
-        if (hit.depth == BIG_F32) {
-            break;
-        }
+    /* Indirections (reflection, refraction, ...) */
+    constexpr u32 MAX_INDIRECTIONS = 8;
+    for (u32 i = 0; i < MAX_INDIRECTIONS; ++i) {
+        /* Get the hit material type */
+        const u32 material = floor((hit.material - 1) / 8.0f);
 
         /* Update the intersection point */
-        hit_pos = ray.origin + ray.dir * hit.depth /* + hit.normal * 0.000001f*/;
+        hit_pos = ray.origin + ray.dir * hit.depth + hit.normal * 0.00001f;
 
-        if (hit.material > 0 && hit.material <= 8) {
-            ray = Ray(hit_pos, ray.dir);
-            ray.medium_id = hit.material;
-            hit = volume->intersect(ray);
+        switch ((MaterialRow)material) {
+            case MaterialRow::GLASS: {
+                // TODO: add glass logic here :)
+                /*
+                ray = Ray(hit_pos, ray.dir);
+                ray.medium_id = hit.material;
+                hit = volume->intersect(ray);
+                */
+                break;
+            }
+            case MaterialRow::MIRROR: {
+                /* Blue noise reflection */
+                const float3 noise = get_3d_noise(bnoise, x, y, frame + i);
+                const float3 jitter = (noise * hit.albedo.w - (hit.albedo.w * 0.5f));
+                const float3 reflect_dir = normalize(reflect(ray.dir, hit.normal) + jitter);
+
+                /* Shoot reflected ray */
+                ray = Ray(hit_pos, reflect_dir);
+                const u32 steps = hit.steps;
+                hit = volume->intersect(ray);
+                hit.steps += steps; /* <- carry step count */
+
+                /* Break if the ray missed */
+                if (hit.depth == BIG_F32) {
+                    i = MAX_INDIRECTIONS; /* Done */
+                }
+                ray.reflected = true;
+                break;
+            }
+            case MaterialRow::METAL: {
+                // WIP
+                if (get_3d_noise(bnoise, x, y, frame + i).x < 0.95f) {
+                    i = MAX_INDIRECTIONS; /* Done */
+                    break;
+                }
+                /* Blue noise reflection */
+                const float3 noise = get_3d_noise(bnoise, x, y, frame + i);
+                const float3 jitter = (noise * hit.albedo.w - (hit.albedo.w * 0.5f));
+                const float3 reflect_dir = normalize(reflect(ray.dir, hit.normal) + jitter);
+
+                /* Shoot reflected ray */
+                ray = Ray(hit_pos, reflect_dir);
+                const u32 steps = hit.steps;
+                hit = volume->intersect(ray);
+                hit.steps += steps; /* <- carry step count */
+
+                /* Break if the ray missed */
+                if (hit.depth == BIG_F32) {
+                    i = MAX_INDIRECTIONS; /* Done */
+                }
+                ray.reflected = true;
+                break;
+            }
+            default: /* Done */
+                i = MAX_INDIRECTIONS;
+                break;
         }
     }
-#endif
     result.albedo = float4(0);
+
+    /* Skybox color if the ray missed */
+    if (hit.depth >= BIG_F32) {
+        result.albedo = skydome.sample_dir(ray.dir);
+        result.irradiance = 0;
+        return result;
+    }
 
 #if 0
     /* Textures */
@@ -232,13 +281,6 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
         }
     }
 #endif
-
-    /* Skybox color if the ray missed */
-    if (hit.depth >= BIG_F32) {
-        result.albedo = skydome.sample_dir(ray.dir);
-        result.irradiance = 0;
-        return result;
-    }
 
     result.albedo = hit.albedo;
 
@@ -636,10 +678,14 @@ inline float4 Renderer::insert_accu_raw(const u32 x, const u32 y, const Ray& ray
             const f32 depth = prev_frame[(i32)center.x + (i32)center.y * WIN_WIDTH].w;
             const float4 sample = float4(tl_s + tr_s + bl_s + br_s, depth);
 
-            /* Depth rejection (take into account camera movement "depth_delta") */
-            const f32 depth_diff = fabs(sample.w - (c.w + depth_delta));
-            if (depth_diff < 0.2f) {
-                confidence = max(confidence - depth_diff * 3.0f, 0.0f);
+            if (ray.reflected == false) {
+                /* Depth rejection (take into account camera movement "depth_delta") */
+                const f32 depth_diff = fabs(sample.w - (c.w + depth_delta));
+                if (depth_diff < 0.2f) {
+                    confidence = max(confidence - depth_diff * 3.0f, 0.0f);
+                    acc_color = sample;
+                }
+            } else {
                 acc_color = sample;
             }
         }

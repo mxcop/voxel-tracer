@@ -37,6 +37,7 @@ struct Ray {
     f32 t = BIG_F32;
     u32 steps = 0;
     u8 medium_id = 0x00; /* Air = 0 */
+    bool reflected = false;
 
     Ray() = default;
     inline Ray(const float3& origin, const float3& dir)
