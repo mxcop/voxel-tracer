@@ -5,6 +5,7 @@
 
 #include "dev/gui.h"
 #include "dev/debug.h"
+#include "dev/profile.h"
 
 u32 HSBtoRGB(f32 h, f32 s, f32 v) {
     assert(-360 <= h && h <= 360 && "h must be within [-360; 360]");
@@ -76,6 +77,11 @@ void Renderer::init() {
         fread(&camera, 1, sizeof(Camera), f);
         fclose(f);
     }
+
+#ifdef PROFILING
+    const DWORD mask = 0b1 << (std::thread::hardware_concurrency() - 1);
+    SetThreadAffinityMask(GetCurrentThread(), mask);
+#endif
 
 #ifdef DEV
     /* Assign the main camera */
@@ -157,6 +163,10 @@ void Renderer::init() {
 
 #else
     volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
+#endif
+
+#ifdef PROFILING
+    profile_init(*this);
 #endif
 
     // texture = new Surface("assets/very-serious-test-image.png");
@@ -460,6 +470,7 @@ void Renderer::tick(f32 dt) {
     Timer t;
 
 #if USE_BVH
+#ifndef PROFILING
     // world.step(dt);
     // Transform& transform = test_obj->transform;
 
@@ -522,8 +533,11 @@ void Renderer::tick(f32 dt) {
     bvh->build(BVH_SHAPES, shapes);
     // reset_accu();
 #endif
+#endif
 
+#ifndef PROFILING
 #pragma omp parallel for schedule(dynamic)
+#endif
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
             Ray ray = camera.get_primary_ray(x, y);
@@ -630,6 +644,7 @@ void Renderer::gui(f32 dt) {
     }
 #endif
 
+#ifndef PROFILING
     /* TEMP: Draw a cube */
     {
         const float3 point = 0, size = 1;
@@ -653,6 +668,7 @@ void Renderer::gui(f32 dt) {
             db::draw_normal(plane, normal, 0xFFFFFF00);
         }
     }
+#endif
 }
 
 void Renderer::shutdown() {

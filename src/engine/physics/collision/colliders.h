@@ -1,7 +1,7 @@
 #pragma once
 
 /* Collider types */
-enum ColliderType { PLANE = 0, SPHERE = 1, BOX = 2, VOXEL = 3 };
+enum ColliderType { PLANE = 0, SPHERE = 1, BOX = 2, VOXELS = 3 };
 
 struct Collider {
     ColliderType type;

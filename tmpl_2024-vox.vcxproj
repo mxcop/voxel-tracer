@@ -223,6 +223,7 @@
     <ClInclude Include="src\dev\debug.h" />
     <ClInclude Include="src\dev\dev.h" />
     <ClInclude Include="src\dev\gui.h" />
+    <ClInclude Include="src\dev\profile.h" />
     <ClInclude Include="src\engine\datastruct\pool.h" />
     <ClInclude Include="src\engine\physics\collision\colliders.h" />
     <ClInclude Include="src\engine\physics\collision\collision.h" />

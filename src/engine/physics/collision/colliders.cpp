@@ -26,7 +26,7 @@ float3 BoxCollider::furthest_point(const Transform& t, const float3& dir) const 
 }
 
 VoxelCollider::VoxelCollider(const int3& grid_size, const f32 vpu, const u8* voxel_data)
-    : Collider(VOXEL), size(grid_size), extend(float3(grid_size) / vpu) {
+    : Collider(VOXELS), size(grid_size), extend(float3(grid_size) / vpu) {
     /* 
      * 0 = Empty or surrounded. (never generates a contact point, and never needs to be checked)
      * 1 = Face voxel.          (never generates a contact point)

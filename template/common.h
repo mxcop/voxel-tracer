@@ -10,13 +10,18 @@ constexpr u32 WIN_HEIGHT = 720;
 constexpr u32 WIN_WIDTH = 1920;
 constexpr u32 WIN_HEIGHT = 1080;
 #else
-constexpr u32 WIN_WIDTH = 2560;
-constexpr u32 WIN_HEIGHT = 1440;
+constexpr u32 WIN_WIDTH = 256;
+constexpr u32 WIN_HEIGHT = 212;
 #endif
 constexpr float2 WIN_SIZE = float2(WIN_WIDTH, WIN_HEIGHT);
 
+constexpr f32 VOXEL = 1.0f / 20.0f;
+
 /* Switch between a BVH world and a voxel volume */
 #define USE_BVH 1
+
+/* For profiling purposes */
+//#define PROFILING
 
 /* Inline functions */
 static inline f32 _min(const f32 a, const f32 b) { return a < b ? a : b; };
