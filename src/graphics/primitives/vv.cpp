@@ -86,7 +86,7 @@ void OVoxelVolume::set_rotation(const quat& rot) { bb.set_rotation_pivot(pivot, 
 
 HitInfo OVoxelVolume::intersect(const Ray& ray) const {
     HitInfo hit = bb.intersect(ray);
-    
+
     /* Traverse the voxel grid if we hit the bounding box */
     if (hit.depth != BIG_F32) {
         const Ray grid_ray = bb.world_to_local(ray);
@@ -181,11 +181,25 @@ f32 OVoxelVolume::traverse_brick(const Brick512* brick, const int3& pos, const R
     for (hit.steps; hit.steps < MAX_STEPS; ++hit.steps) {
         /* Fetch the active cell */
         const u8 voxel = get_voxel(brick, cell);
-        if (voxel) {
-            const int3 hit_cell = (pos << 3) + cell;
-            const u32 i =
-                (hit_cell.z * grid_size.y * grid_size.x) + (hit_cell.y * grid_size.x) + hit_cell.x;
-            hit.albedo = RGB8_to_RGBF32(palette[voxels[i]]);
+        if (ray.medium_id) {
+            const int3 hitc = (pos << 3) + cell;
+            const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
+            const u8 voxel_id = voxels[i];
+            if (voxel != ray.medium_id) {
+                const int3 hitc = (pos << 3) + cell;
+                const u32 i =
+                    (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
+                const u8 voxel_id = voxels[i];
+                hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
+                hit.material = voxel_id;
+                return t / vpu;
+            }
+        } else if (voxel) {
+            const int3 hitc = (pos << 3) + cell;
+            const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
+            const u8 voxel_id = voxels[i];
+            hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
+            hit.material = voxel_id;
             return t / vpu;
         }
 

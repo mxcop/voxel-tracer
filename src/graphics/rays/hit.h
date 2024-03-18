@@ -3,6 +3,7 @@
 /* Holds information about a ray hit. */
 struct HitInfo {
     f32 depth = BIG_F32;
+    u8 material = 0;
     float4 albedo = {};
     float3 normal = {};
     u32 steps = 0; /* For debugging! */
