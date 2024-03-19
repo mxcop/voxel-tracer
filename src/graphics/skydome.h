@@ -5,8 +5,6 @@ class SkyDome {
     vector<f32> sampler;
     i32 w, h, n;
 
-    float3 int_samples[6] = {};
-
    public:
     SkyDome() = default;
     SkyDome(const char* file_path);
@@ -40,14 +38,5 @@ class SkyDome {
         u32 i = min(u + v * w, (u32)(w * h)); /* safety clamp */
         // u32 i = (u + v * w) % (w * h);
         return 0.65f * float3(sampler[i * 3], sampler[i * 3 + 1], sampler[i * 3 + 2]);
-    }
-
-    float3 sample_voxel_normal(float3 normal) const { 
-        if (normal.x == 1) return int_samples[0];
-        if (normal.y == 1) return int_samples[1];
-        if (normal.z == 1) return int_samples[2];
-        if (normal.x == -1) return int_samples[3];
-        if (normal.y == -1) return int_samples[4];
-        /*if (normal.z == -1)*/ return int_samples[5];
     }
 };

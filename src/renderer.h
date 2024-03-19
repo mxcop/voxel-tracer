@@ -11,6 +11,8 @@
 #include "graphics/primitives/vv.h"
 #include "graphics/tonemap.h"
 #include "graphics/primitives/basic/sphere.h"
+#include "graphics/scene.h"
+#include "graphics/lighting/materials.h"
 
 #include "engine/physics/world.h"
 #include "game/robot-arm.h"
@@ -18,10 +20,19 @@
 /* Quite expensive! */
 #define DENOISE 0
 
-constexpr u32 BVH_SHAPES = 1;
-
 struct TraceResult {
     float4 albedo = 0, irradiance = 0;
+    f32 depth = BIG_F32;
+    bool reproject = true;
+
+    explicit TraceResult(const HitInfo& hit)
+        : albedo(hit.albedo), irradiance(0), depth(hit.depth) {}
+
+    /** @brief Don't reproject this sample (returns itself) */
+    TraceResult& no_reproject() {
+        reproject = false;
+        return *this;
+    };
 };
 
 class Renderer : public TheApp {
@@ -29,7 +40,7 @@ class Renderer : public TheApp {
     /** @brief Initialize the application */
     void init();
     /** @brief Trace the scene */
-    TraceResult trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const;
+    TraceResult trace(Ray& ray, const u32 x, const u32 y, bool debug = false) const;
     /** @brief Called as often as possible */
     void tick(f32 dt);
     /** @brief Called after "tick" for ImGUI rendering */
@@ -59,31 +70,16 @@ class Renderer : public TheApp {
 
     int2 mousePos;
     u32 frame = 0u;
-    float3 sun_dir = {-0.619501f, 0.465931f, -0.631765f};
 
     /* Game camera */
     Camera camera;
     f32 depth_delta = 0;
 
-    /* Lights */
-    vector<LightSource> lights;
-    vector<SphereLight> area_lights;
-
     /* Scene */
-#if USE_BVH
-    Traceable* shapes[BVH_SHAPES];
-    Bvh* bvh = nullptr;
-    Sphere* test_vv = nullptr;
-    Sphere* test_plane_vv = nullptr;
-    OVoxelVolume* arm_vv[4] = {};
-#else
-    VoxelVolume* volume = nullptr;
-    // BrickVolume* volume = nullptr;
-#endif
+    Scene scene;
 
-    /* Textures */
-    BlueNoise* bnoise = nullptr;
-    SkyDome skydome;
+    /* Blue noise sampler */
+    const BlueNoise* bnoise = nullptr;
 
     /* === BUFFERS === */
     /* Accumulator (reprojection) */
@@ -100,5 +96,4 @@ class Renderer : public TheApp {
     PhyWorld world;
     PhyObject* test_obj = nullptr;
     PhyObject* test_plane_obj = nullptr;
-    RobotArm arm;
 };

@@ -120,11 +120,19 @@ HitInfo OVoxelVolume::intersect(const Ray& ray) const {
 
                     hit.normal = 0, hit.normal[axis] = 1;
                     hit.normal = -hit.normal * step;
-                    hit.normal = TransformVector(hit.normal, bb.model);
+                    hit.normal = normalize(TransformVector(hit.normal, bb.model));
                     return hit;
                 }
-            }
+            } else if (ray.medium_id) {
+                hit.depth = hit.depth + t * rbpu;
+                if (hit.steps == 0) return hit;
 
+                hit.normal = 0, hit.normal[axis] = 1;
+                hit.normal = -hit.normal * step;
+                hit.normal = normalize(TransformVector(hit.normal, bb.model));
+                return hit;
+            }
+            
             /* Amanatides & Woo */
             /* <http://www.cse.yorku.ca/~amana/research/grid.pdf> */
             if (tmax.x < tmax.y) {
@@ -154,8 +162,33 @@ HitInfo OVoxelVolume::intersect(const Ray& ray) const {
             }
         }
 
+        if (ray.medium_id) {
+            hit.material = 0x00; /* Air */
+            if (tmax.x < tmax.y) {
+                if (tmax.x < tmax.z) {
+                    axis = 0;
+                } else {
+                    axis = 2;
+                }
+            } else {
+                if (tmax.y < tmax.z) {
+                    axis = 1;
+                } else {
+                    axis = 2;
+                }
+            }
+            hit.depth = bb.exit_t(ray);
+            hit.normal = 0, hit.normal[axis] = 1;
+            hit.normal = -hit.normal * step;
+            hit.normal = normalize(TransformVector(hit.normal, bb.model));
+            return hit;
+        }
+
         /* No hit occured! */
         hit.depth = BIG_F32;
+    } else if (ray.medium_id) {
+        hit.material = 0x00; /* Air */
+        hit.depth = 0;
     }
 
     return hit;
@@ -177,15 +210,18 @@ f32 OVoxelVolume::traverse_brick(const Brick512* brick, const int3& pos, const R
     /* Determine t at which the ray crosses the first voxel boundary */
     float3 tmax = ((float3(cell) - entry) + fmaxf(step, float3(0))) * ray.r_dir;
 
+    bool exited = false;
+
     f32 t = 0.0f;
     for (hit.steps; hit.steps < MAX_STEPS; ++hit.steps) {
         /* Fetch the active cell */
         const u8 voxel = get_voxel(brick, cell);
+        // TODO: all this logic is not great...
         if (ray.medium_id) {
             const int3 hitc = (pos << 3) + cell;
             const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
             const u8 voxel_id = voxels[i];
-            if (voxel != ray.medium_id) {
+            if (voxel_id != ray.medium_id) {
                 const int3 hitc = (pos << 3) + cell;
                 const u32 i =
                     (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
@@ -198,9 +234,20 @@ f32 OVoxelVolume::traverse_brick(const Brick512* brick, const int3& pos, const R
             const int3 hitc = (pos << 3) + cell;
             const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
             const u8 voxel_id = voxels[i];
-            hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
-            hit.material = voxel_id;
-            return t / vpu;
+            if (ray.shadow_ray) {
+                // TODO: this is not great...
+                if (voxel_id > 16) {
+                    hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
+                    hit.material = voxel_id;
+                    return t / vpu;
+                }
+            } else if (exited || voxel_id != ray.ignore_medium) {
+                hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
+                hit.material = voxel_id;
+                return t / vpu;
+            }
+        } else if (ray.ignore_medium) {
+            exited = true;
         }
 
         /* Amanatides & Woo */

@@ -574,6 +574,8 @@ inline int2 abs( const int2& v ) { return make_int2( abs( v.x ), abs( v.y ) ); }
 inline int3 abs( const int3& v ) { return make_int3( abs( v.x ), abs( v.y ), abs( v.z ) ); }
 inline int4 abs( const int4& v ) { return make_int4( abs( v.x ), abs( v.y ), abs( v.z ), abs( v.w ) ); }
 
+inline float3 exp(const float3& v) { return make_float3(exp(v.x), exp(v.y), exp(v.z)); }
+
 inline float3 reflect( const float3& i, const float3& n ) { return i - 2.0f * n * dot( n, i ); }
 
 inline float2 fma( const  float2 a, const  float2 b, const float2 c ) { return float2( fmaf( a.x, b.x, c.x ), fmaf( a.y, b.y, c.y ) ); }
@@ -593,7 +595,10 @@ inline float3 diffusereflection( const float3 N, uint& seed )
 	return normalize( R );
 }
 
-inline float3 cosineweighteddiffusereflection( const float3 N, const float r0, const float r1 )
+/**
+ * @brief Cosine diffuse reflection around a normal vector.
+ */
+inline float3 cos_diffuse_reflect( const float3 N, const float r0, const float r1 )
 {
 	// based on Global Illumination Compendium
 	float term1 = 6.28318531f * r0, term2 = sqrtf( 1 - r1 );

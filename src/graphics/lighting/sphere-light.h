@@ -1,6 +1,8 @@
 #pragma once
 
 class Bvh;
+class NoiseSampler;
+class Scene;
 
 /**
  * @brief Spherical light source, radiating light into the scene from a sphere.
@@ -47,11 +49,9 @@ class SphereLight {
     SphereLight() = delete;
     SphereLight(const float3 origin, const f32 radius, const float3 color, const f32 power);
 
-    // TODO: This is terrible...
-    float4 contribution(const Ray& pray, const HitInfo& phit, const float3& surface,
-                        const BrickVolume* scene, const float3& noise) const;
-    float4 contribution(const Ray& pray, const HitInfo& phit, const float3& surface,
-                        const VoxelVolume* scene, const float3& noise) const;
-    float4 contribution(const Ray& pray, const HitInfo& phit, const float3& surface,
-                        const Bvh* scene, const float3& noise) const;
+    /**
+     * @brief Evaluate the contribution of the light on a given point and normal.
+     */
+    float3 contribution(const float3& p, const float3& n, const Scene& scene,
+                        const NoiseSampler& noise) const;
 };

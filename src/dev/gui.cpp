@@ -65,16 +65,16 @@ void devgui_control() {
         ImGui::Checkbox("Reprojection", &dev::use_projection);
 
         /* Create sphere lights from the GUI */
-        if (ImGui::CollapsingHeader("Sphere Light")) {
-            ImGui::ColorEdit3("Color", &inter::light_color.x);
-            ImGui::InputFloat("Radius", &inter::radius);
-            ImGui::InputFloat("Power", &inter::power);
-            if (ImGui::Button("Spawn on camera")) {
-                const float3 origin = dev::renderer->camera.pos;
-                dev::renderer->area_lights.emplace_back(origin, inter::radius, inter::light_color,
-                                                        inter::power);
-            }
-        }
+        //if (ImGui::CollapsingHeader("Sphere Light")) {
+        //    ImGui::ColorEdit3("Color", &inter::light_color.x);
+        //    ImGui::InputFloat("Radius", &inter::radius);
+        //    ImGui::InputFloat("Power", &inter::power);
+        //    if (ImGui::Button("Spawn on camera")) {
+        //        const float3 origin = dev::renderer->camera.pos;
+        //        dev::renderer->area_lights.emplace_back(origin, inter::radius, inter::light_color,
+        //                                                inter::power);
+        //    }
+        //}
     }
     ImGui::End();
 }

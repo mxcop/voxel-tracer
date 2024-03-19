@@ -18,6 +18,8 @@ struct OBB : public Traceable {
     AABB get_aabb() const override;
     float3 center() const override;
     HitInfo intersect(const Ray& ray) const override;
+    
+    f32 exit_t(const Ray& ray) const;
 
     f32 area() const;
     void set_position(const float3 pos);

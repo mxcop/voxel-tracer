@@ -11,7 +11,7 @@ namespace db {
  * @brief Project a world point onto the main camera.
  */
 inline static int2 world_to_screen(const float3& p) {
-    const Pyramid& view_pyramid = dev::main_camera->prev_pyramid;
+    const Pyramid& view_pyramid = dev::main_camera->pyramid;
     return floori(view_pyramid.safe_project(p) * WIN_SIZE);
 }
 

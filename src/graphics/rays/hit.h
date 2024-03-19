@@ -7,6 +7,9 @@ struct HitInfo {
     float4 albedo = {};
     float3 normal = {};
     u32 steps = 0; /* For debugging! */
+
+    /** @return True if no hit occured. */
+    bool no_hit() const { return depth == BIG_F32; };
 };
 
 struct PacketHitInfo {

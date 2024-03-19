@@ -24,12 +24,14 @@ class BlueNoise {
     BlueNoise& operator=(const BlueNoise&) = delete;
     BlueNoise& operator=(BlueNoise&&) = default;
 
+    /** @brief Sample from a 2D blue noise texture */
     float2 sample_2d(u32 x, u32 y) const {
         x = x % w_2d, y = y % h_2d;
         const u32 i = (x + y * w_2d) * n_2d;
         return float2(sampler_2d[i + 0], sampler_2d[i + 1]);
     }
 
+    /** @brief Sample from a 3D blue noise texture */
     float3 sample_3d(u32 x, u32 y) const {
         x = x % w_3d, y = y % h_3d;
         const u32 i = (x + y * w_3d) * n_3d;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "hit.h"
+
 /* Basic SIMD friendly Ray structure. */
 struct Ray {
     /* Ray origin */
@@ -37,11 +39,18 @@ struct Ray {
     f32 t = BIG_F32;
     u32 steps = 0;
     u8 medium_id = 0x00; /* Air = 0 */
-    bool reflected = false;
+    u8 ignore_medium = 0xFF;
+    bool shadow_ray = false;
+    bool debug = false;
 
     Ray() = default;
     inline Ray(const float3& origin, const float3& dir)
         : origin(origin), dir(dir), r_dir(1.0f / dir), sign_dir(sign_of_dir(dir)) {}
+
+    /** @return The intersection point of the ray. */
+    inline float3 intersection(const HitInfo& hit) const {
+        return (origin + dir * hit.depth) + hit.normal * 0.0001f;
+    };
 
     inline f32 intersect_aabb(const f128& min, const f128& max) const {
         /* Idea to use fmsub to save 1 instruction came from

@@ -10,7 +10,7 @@ f32 Camera::update(const f32 t) {
     float3 up = normalize(cross(ahead, right));
 
     /* Save the current view pyramid */
-    prev_pyramid = Pyramid(pos, ahead, tl - pos, tr - pos, bl - pos);
+    prev_pyramid = pyramid;
 
     bool changed = false;
     /* Apply any user inputs */
@@ -41,6 +41,8 @@ f32 Camera::update(const f32 t) {
     tl = pos + 2.0f * ahead - ASPECT_RATIO * right + up;
     tr = pos + 2.0f * ahead + ASPECT_RATIO * right + up;
     bl = pos + 2.0f * ahead - ASPECT_RATIO * right - up;
+
+    pyramid = Pyramid(pos, ahead, tl - pos, tr - pos, bl - pos);
     
     if (moved_forward) {
         /* Return the forward delta (for reprojection) */

@@ -3,73 +3,11 @@
 #include "graphics/primitives/basic/sphere.h"
 #include "graphics/noise/gaussian.h"
 #include "graphics/lighting/materials.h"
+#include "graphics/noise/sampler.h"
 
 #include "dev/gui.h"
 #include "dev/debug.h"
 #include "dev/profile.h"
-
-u32 HSBtoRGB(f32 h, f32 s, f32 v) {
-    assert(-360 <= h && h <= 360 && "h must be within [-360; 360]");
-    assert(0 <= s && s <= 1 && "s must be within [0; 100]");
-    assert(0 <= v && v <= 1 && "v must be within [0; 100]");
-
-    // Keep h within [0; 359], s and v within [0; 1]
-    if (h >= 360) h -= 360;
-    if (h < 0) h += 360;
-
-    // Convert hsv to rgb. This algorithm is described at
-    // https://en.wikipedia.org/wiki/HSL_and_HSV#From_HSV
-    const f32 C = v * s;
-    const f32 hd = h / 60;
-    const int hi = int(hd);
-    const f32 hd_mod2 = hd - hi + hi % 2;
-    const f32 X = C * (1 - fabs(hd_mod2 - 1));
-    f32 r, g, b;
-
-    switch (hi) {
-        case 0:
-            r = C;
-            g = X;
-            b = 0;
-            break;
-        case 1:
-            r = X;
-            g = C;
-            b = 0;
-            break;
-        case 2:
-            r = 0;
-            g = C;
-            b = X;
-            break;
-        case 3:
-            r = 0;
-            g = X;
-            b = C;
-            break;
-        case 4:
-            r = X;
-            g = 0;
-            b = C;
-            break;
-        case 5:
-            r = C;
-            g = 0;
-            b = X;
-            break;
-        // This should never happen
-        default:
-            return 0;
-    }
-
-    const f32 m = v - C;
-    r += m;
-    g += m;
-    b += m;
-
-    // Scale r, g, b to [0; 255] and pack them into a number 0xRRGGBB
-    return (int(r * 255) << 16) + (int(g * 255) << 8) + int(b * 255);
-}
 
 void Renderer::init() {
     /* Try load the camera settings */
@@ -82,11 +20,18 @@ void Renderer::init() {
 #ifdef PROFILING
     const DWORD mask = 0b1 << (std::thread::hardware_concurrency() - 1);
     SetThreadAffinityMask(GetCurrentThread(), mask);
+
+    profile_init(*this);
 #endif
 
 #ifdef DEV
     /* Assign the main camera */
     dev::main_camera = &camera;
+#endif
+
+#if DENOISE
+    blur_in = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
+    blur_out = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
 #endif
 
     /* Create the accumulator */
@@ -97,49 +42,44 @@ void Renderer::init() {
     prev_frame = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
     if (prev_frame) memset(prev_frame, 0, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
 
-#if DENOISE
-    blur_in = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
-    blur_out = (float4*)MALLOC64(WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
-#endif
-
+    /* Load the blue noise sampler */
     bnoise = new BlueNoise();
-    skydome = SkyDome("assets/kiara_1_dawn_4k.hdr");
-
-#if USE_BVH
-    const f32 VOXEL = 1.0f / 20.0f;
-
-    /* Crates */
-    shapes[0] = new OVoxelVolume({0, 0, 0}, "assets/vox/material-test.vox");
-    // shapes[1] =
-    //     new OVoxelVolume(float3(-3.0f, 2.5f - VOXEL * 3, -0.5f), "assets/vox/crate-16h.vox");
-    // shapes[2] = new OVoxelVolume(float3(1.0f + VOXEL * 17, 2.5f, -0.5f),
-    // "assets/vox/crate-16.vox");
-
-    bvh = new Bvh(BVH_SHAPES, shapes);
-
-    /* Physics testing */
-    // test_obj = world.add_object(PhyObject(new SphereCollider(0, 1.5f), float3(0, 10, 1.0f),
-    // 0.01f)); test_plane_obj =
-    //     world.add_object(PhyObject(new BoxCollider(float3(-4, -1, -4), float3(4, 0, 4)), 0, 0));
-
-#else
-    volume = new VoxelVolume(float3(0.0f, 0.0f, 0.0f), int3(128, 128, 128));
-#endif
-
-#ifdef PROFILING
-    profile_init(*this);
-#endif
 }
 
-/** @brief Sample a 3D blue noise vector. */
-static float3 get_3d_noise(const BlueNoise* bnoise, const u32 x, const u32 y, const u32 frame) {
-    const float3 raw_noise = bnoise->sample_3d(x, y);
-    return {(f32)fmod(raw_noise.x + R2X * (f64)frame, 1.0),
-            (f32)fmod(raw_noise.y + R2Y * (f64)frame, 1.0),
-            (f32)fmod(raw_noise.z + R2Z * (f64)frame, 1.0)};
+float3 debug_point = {0.42f, 0.22f, 2.75f};
+float3 debug_origin = {1.3f, 1.07f, 4.1f};
+
+/**
+ * @brief Ray trace the scene.
+ */
+TraceResult Renderer::trace(Ray& ray, const u32 x, const u32 y, bool debug) const {
+    /* Intersect the scene */
+    const HitInfo hit = scene.intersect(ray);
+    TraceResult result(hit);
+
+    /* Handle special display modes, for debugging */
+    if (dev::display_modes(hit, result)) return result;
+
+    /* Return if we didn't hit a surface (result already has sky albedo) */
+    if (hit.no_hit()) return result.no_reproject();
+
+    /* Create a blue noise sampler */
+    const NoiseSampler noise(bnoise, x, y, frame);
+
+    /* Get the intersection point */
+    const float3 hit_point = ray.intersection(hit);
+
+    /* Evaluate material */
+    MatEval eval;
+    eval_material(eval, ray, hit, scene, noise);
+    result.albedo = eval.albedo, result.irradiance = fmaxf(eval.irradiance, 0);
+
+    // if (eval.bounces) return result.accumulate();
+    return result;
 }
 
-TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) const {
+#if 0
+TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y, bool debug) const {
     TraceResult result;
 #if USE_BVH
     const Bvh* volume = this->bvh;
@@ -147,9 +87,11 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
     hit = volume->intersect(ray);
 
     float3 hit_pos;
+    result.albedo = float4(0);
 
     /* Indirections (reflection, refraction, ...) */
     constexpr u32 MAX_INDIRECTIONS = 8;
+    f32 glass_mul = 1.0f;
     for (u32 i = 0; i < MAX_INDIRECTIONS; ++i) {
         /* Get the hit material type */
         const u32 material = floor((hit.material - 1) / 8.0f);
@@ -160,6 +102,85 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
         switch ((MaterialRow)material) {
             case MaterialRow::GLASS: {
                 // TODO: add glass logic here :)
+                /* Find the probability of reflection using Fresnel */
+                const f32 prob = 0;  // fresnel_reflect_prob(1.0f, 1.125f, hit.normal, ray.dir);
+
+                // TEMP: debugging
+                if (debug) {
+                    const float3 dir = normalize(debug_point - debug_origin);
+                    db::draw_normal(hit_pos - dir, dir, 0xFFFFFF00);
+                    db::draw_normal(hit_pos, hit.normal, 0xFF0000FF);
+                    const float3 reflect_dir = normalize(reflect(dir, hit.normal));
+                    db::draw_normal(hit_pos, reflect_dir, 0xFFFF0000);
+                    const float3 refract_dir = normalize(refract(hit.normal, dir, 1.0f / 1.125f));
+                    db::draw_normal(hit_pos, refract_dir, 0xFF00FF00);
+
+                    /* Shoot refracted ray */
+                    ray = Ray(hit_pos - hit.normal * 0.0001f, refract_dir);
+                    ray.medium_id = hit.material;
+                    hit = volume->intersect(ray);
+
+                    hit_pos = ray.origin + ray.dir * hit.depth - hit.normal * 0.00001f;
+                    const float3 exit_dir = refract(hit.normal, refract_dir, 1.125f / 1.0f);
+                    db::draw_normal(hit_pos, exit_dir, 0xFFFF0000);
+                }
+
+                /* Reflect */
+                if (RandomFloat() < prob) {
+                    const float3 reflect_dir = normalize(reflect(ray.dir, hit.normal));
+
+                    /* Shoot reflected ray */
+                    ray = Ray(hit_pos, reflect_dir);
+                    const u32 steps = hit.steps;
+                    hit = volume->intersect(ray);
+                    hit.steps += steps; /* <- carry step count */
+
+                    /* Break if the ray missed */
+                    if (hit.depth == BIG_F32) {
+                        i = MAX_INDIRECTIONS; /* Done */
+                    }
+                    ray.reflected = true;
+                } else { /* Transmit */
+                    const float3 refract_dir =
+                        normalize(refract(hit.normal, ray.dir, 1.0f / 1.125f));
+                    const f32 reflect_mul = fresnel_reflect_prob(1.125f, 1.0f, hit.normal, ray.dir);
+                    const f32 refract_mul = 1.0f - reflect_mul;
+
+                    /* Shoot refracted ray */
+                    ray = Ray(hit_pos - hit.normal * 0.0001f, refract_dir);
+                    ray.medium_id = hit.material;
+                    const u8 internal_medium = hit.material;
+                    hit = volume->intersect(ray);
+                    const float3 internal_normal = hit.normal;
+
+                    hit_pos = ray.origin + ray.dir * hit.depth - internal_normal * 0.0001f;
+                    const float3 exit_dir = normalize(refract(internal_normal, refract_dir, 1.125f / 1.0f));
+
+                    /* Shoot exit ray */
+                    ray = Ray(hit_pos, exit_dir);
+                    const u32 steps = hit.steps;
+                    hit = volume->intersect(ray);
+                    hit.steps += steps; /* <- carry step count */
+                    if (hit.depth >= BIG_F32) {
+                        hit.albedo = skydome.sample_dir(ray.dir);
+                    }
+                    result.albedo += hit.albedo * glass_mul * refract_mul;
+
+                    /* Internal reflection */
+                    ray = Ray(hit_pos + internal_normal * 0.0002f,
+                              normalize(reflect(refract_dir, internal_normal)));
+                    ray.medium_id = internal_medium;
+
+                    glass_mul *= reflect_mul;
+
+                    /* Break if the ray missed */
+                    //if (hit.depth == BIG_F32) {
+                    //    i = MAX_INDIRECTIONS; /* Done */
+                    //}
+
+                    ray.reflected = true;
+                    // i = MAX_INDIRECTIONS; /* Done */
+                }
                 /*
                 ray = Ray(hit_pos, ray.dir);
                 ray.medium_id = hit.material;
@@ -214,14 +235,6 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
                 i = MAX_INDIRECTIONS;
                 break;
         }
-    }
-    result.albedo = float4(0);
-
-    /* Skybox color if the ray missed */
-    if (hit.depth >= BIG_F32) {
-        result.albedo = skydome.sample_dir(ray.dir);
-        result.irradiance = 0;
-        return result;
     }
 
 #if 0
@@ -281,6 +294,13 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
         }
     }
 #endif
+
+    /* Skybox color if the ray missed */
+    if (hit.depth >= BIG_F32) {
+        result.albedo = skydome.sample_dir(ray.dir);
+        result.irradiance = 0;
+        return result;
+    }
 
     result.albedo = hit.albedo;
 
@@ -432,39 +452,7 @@ TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y) co
 
     return result;
 }
-
-// TODO: Move this stuff out of "renderer.cpp"
-/* Source : <https://www.youtube.com/watch?v=KPoeNZZ6H4s> */
-class SecondOrderDyn {
-    f32 xp, y, yd;
-    f32 k1, k2, k3;
-
-   public:
-    SecondOrderDyn(f32 f, const f32 z, const f32 r, const f32& x0) {
-        f = fmaxf(f, 0.01f);
-        k1 = z / (PI * f);
-        k2 = 1 / ((2 * PI * f) * (2 * PI * f));
-        k3 = r * z / (2 * PI * f);
-
-        xp = x0;
-        y = x0;
-        yd = 0;
-    }
-
-    f32 update(const f32 dt, const f32 x, const f32 xd) {
-        // const f32 xd = (x - xp) / dt;
-        const f32 k2_stable = fmaxf(k2, 1.1f * (dt * dt / 4 + dt * k1 / 2));
-        y = y + dt * yd;
-        yd = yd + dt * (x + k3 * xd - y - k1 * yd) / k2_stable;
-        return y;
-    }
-};
-
-constexpr f32 F = 0.15f;
-constexpr f32 Z = 0.5f;
-constexpr f32 R = 2.0f;
-static SecondOrderDyn dyn[4] = {SecondOrderDyn(F, Z, R, 0), SecondOrderDyn(F, Z, R, 0),
-                                SecondOrderDyn(F, Z, R, 0), SecondOrderDyn(F, Z, R, 0)};
+#endif
 
 /**
  * @brief Called every frame.
@@ -481,30 +469,26 @@ void Renderer::tick(f32 dt) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
             Ray ray = camera.get_primary_ray(x, y);
 
-            HitInfo hit; /* Trace the scene */
-            const TraceResult r = trace(ray, hit, x, y);
+            /* Trace the scene */
+            const TraceResult r = trace(ray, x, y);
 
-            if (hit.depth >= BIG_F32) {
+            if (r.depth >= BIG_F32) {
                 const float4 c =
-                    aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(1.0f, hit.depth)));
+                    aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(1.0f, r.depth)));
                 albedo_buf[x + y * WIN_WIDTH] = r.albedo * 1.0f;
                 screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
                 continue;
             }
 
-            if (r.irradiance.x == -1) {
-#if DENOISE
-                const float4 c = insert_accu_raw(x, y, ray, float4(r.albedo, hit.depth));
-#else
+            if (not r.reproject) {
                 const float4 c = r.albedo;
-#endif
                 screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
                 continue;
             }
 
             /* Accumulate and reproject */
             const float4 c =
-                aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(r.irradiance, hit.depth)));
+                aces_approx(r.albedo * insert_accu_raw(x, y, ray, float4(r.irradiance, r.depth)));
             albedo_buf[x + y * WIN_WIDTH] = r.albedo;
             screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
         }
@@ -569,31 +553,8 @@ void Renderer::gui(f32 dt) {
     }
 #endif
 
-#ifndef PROFILING
-    /* TEMP: Draw a cube */
-    {
-        const float3 point = 0, size = 1;
-        static f32 time = 0;
-        time += dt;
-        const quat rot = quat::from_axis_angle(normalize({1, 1, 0}), time);
-        db::draw_obb(point, size, rot);
-
-        /* Cube planes */
-        const float3 planes[6] = {
-            {0, 1, 0},  /* top */
-            {0, -1, 0}, /* bottom */
-            {1, 0, 0},  /* right */
-            {-1, 0, 0}, /* left */
-            {0, 0, 1},  /* forward */
-            {0, 0, -1}, /* backward */
-        };
-        for (u32 i = 0; i < 6; i++) {
-            const float3 plane = rot.rotateVector(planes[i] * (size * 0.5f));
-            const float3 normal = normalize(plane);
-            db::draw_normal(plane, normal, 0xFFFFFF00);
-        }
-    }
-#endif
+    // TODO: remove this
+    trace(dev::debug_ray, 0, 0, true);
 }
 
 void Renderer::shutdown() {
@@ -602,11 +563,6 @@ void Renderer::shutdown() {
     fwrite(&camera, 1, sizeof(Camera), f);
     fclose(f);
 
-#if USE_BVH
-    delete bvh;
-#else
-    delete volume;
-#endif
     delete bnoise;
 }
 
@@ -617,7 +573,11 @@ void Renderer::MouseDown(int button) {
 #endif
 
     if (button == 0) {
-        // volume->place_voxel(camera.get_primary_ray(mousePos.x, mousePos.y));
+        const Ray ray = camera.get_primary_ray(mousePos.x, mousePos.y);
+        dev::debug_ray = ray;
+        dev::debug_ray.debug = true;
+        //debug_point = ray.origin + ray.dir * scene.intersect(ray).depth;
+        //debug_origin = ray.origin;
     }
 }
 
@@ -678,14 +638,10 @@ inline float4 Renderer::insert_accu_raw(const u32 x, const u32 y, const Ray& ray
             const f32 depth = prev_frame[(i32)center.x + (i32)center.y * WIN_WIDTH].w;
             const float4 sample = float4(tl_s + tr_s + bl_s + br_s, depth);
 
-            if (ray.reflected == false) {
-                /* Depth rejection (take into account camera movement "depth_delta") */
-                const f32 depth_diff = fabs(sample.w - (c.w + depth_delta));
-                if (depth_diff < 0.2f) {
-                    confidence = max(confidence - depth_diff * 3.0f, 0.0f);
-                    acc_color = sample;
-                }
-            } else {
+            /* Depth rejection (take into account camera movement "depth_delta") */
+            const f32 depth_diff = fabs(sample.w - (c.w + depth_delta));
+            if (depth_diff < 0.2f) {
+                confidence = max(confidence - depth_diff * 3.0f, 0.0f);
                 acc_color = sample;
             }
         }

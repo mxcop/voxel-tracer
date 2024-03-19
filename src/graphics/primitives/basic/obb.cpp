@@ -79,6 +79,32 @@ HitInfo OBB::intersect(const Ray& ray) const {
     return hit;
 }
 
+f32 OBB::exit_t(const Ray& ray) const {
+    f32 tmax = BIG_F32;
+
+    /* "model[3]" holds the world position of the box */
+    const float3 delta = model.GetTranslation() - ray.origin;
+
+    /* Loop to be unrolled by the compiler */
+    for (u32 d = 0; d < 3; ++d) {
+        const float3 axis = float3(model.GetColumn(d));
+        const f32 e = dot(axis, delta), f_inv = 1.0f / dot(ray.dir, axis);
+
+        f32 t1 = (e + 0) * f_inv;
+        f32 t2 = (e + size[d]) * f_inv;
+
+        /* Swap t1 & t2 so t1 is always the smallest */
+        if (t1 > t2) {
+            const f32 temp = t1;
+            t1 = t2, t2 = temp;
+        }
+
+        tmax = fminf(t2, tmax);
+    }
+
+    return tmax;
+}
+
 float3 OBB::intersection_normal(const Ray& ray, const f32 tmin) const {
     const float3 p = TransformPosition(ray.origin + ray.dir * tmin, imodel);
     const float3 min = 0, max = size;
@@ -100,5 +126,9 @@ float3 OBB::intersection_normal(const Ray& ray, const f32 tmin) const {
 }
 
 Ray OBB::world_to_local(const Ray& ray) const {
-    return Ray(TransformPosition(ray.origin, imodel), TransformVector(ray.dir, imodel));
+    Ray local_ray = Ray(TransformPosition(ray.origin, imodel), TransformVector(ray.dir, imodel));
+    local_ray.medium_id = ray.medium_id;
+    local_ray.ignore_medium = ray.ignore_medium;
+    local_ray.shadow_ray = ray.shadow_ray;
+    return local_ray;
 }
