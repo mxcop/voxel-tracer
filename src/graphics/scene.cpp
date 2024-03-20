@@ -2,10 +2,13 @@
 
 Scene::Scene() {
     /* Material testing shape */
-    shapes[0] = new OVoxelVolume(0, "assets/vox/testing/glass-box.vox");
+    shapes_len = 2;
+    shapes = new Traceable* [shapes_len] {};
+    shapes[0] = new AABB({-50, -2, -50}, {50, -1, 50}, {1, 1, 1});
+    shapes[1] = new OVoxelVolume(0, "assets/vox/testing/glass-box.vox");
 
     /* Initialize the BVH */
-    bvh = new Bvh(SCENE_SHAPES, shapes);
+    bvh = new Bvh(shapes_len, shapes);
 
     /* Load the HDR skydome */
     skydome = SkyDome("assets/kiara_1_dawn_4k.hdr");
@@ -13,14 +16,14 @@ Scene::Scene() {
 
 Scene::~Scene() {
     delete bvh;
-    for (u32 i = 0; i < SCENE_SHAPES; i++) {
+    for (u32 i = 0; i < shapes_len; i++) {
         delete shapes[i];
     }
 }
 
 void Scene::tick(const f32 dt) {
     /* Reconstruct the BVH in case something moved */
-    bvh->build(SCENE_SHAPES, shapes);
+    bvh->build(shapes_len, shapes);
 }
 
 /**
@@ -47,3 +50,16 @@ bool Scene::is_occluded(const Ray& ray, const f32 tmax) const {
  * @brief Get the color of the sky for a ray.
  */
 float3 Scene::sample_sky(const Ray& ray) const { return skydome.sample_dir(ray.dir); }
+
+
+#ifdef PROFILING
+void Scene::set_shapes(Traceable** new_shapes, const u32 len) {
+    shapes_len = len;
+    // TODO: delete old shapes...
+    shapes = new Traceable* [shapes_len] {};
+    for (u32 i = 0; i < len; i++) {
+        shapes[i] = new_shapes[i];
+    }
+    bvh->build(shapes_len, shapes);
+}
+#endif

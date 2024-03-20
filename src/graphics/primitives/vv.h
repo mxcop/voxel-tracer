@@ -1,5 +1,13 @@
 #pragma once
 
+#include <curves/hilbert.h>
+
+/* Does not seem to yield any significant improvements */
+#define USE_HILBERT 0
+
+/* Seems to be slower */
+#define USE_BITPACKING 1
+
 /**
  * @brief A grid of voxels with rotation.
  */
@@ -27,7 +35,9 @@ class OVoxelVolume : public Traceable {
     } brickmap;
 
     /* Voxel material indices, 1 byte each. */
+#if USE_BITPACKING
     u8* voxels = nullptr;
+#endif
     int3 grid_size = 0;
 
     /* Voxel material palette, 8 bit rgba. */
@@ -50,9 +60,36 @@ class OVoxelVolume : public Traceable {
      */
     __forceinline u8 get_voxel(const Brick512* brick, const int3& voxel) const {
         const u32 i = (voxel.z * 8 * 8) + (voxel.y * 8) + voxel.x;
+#if USE_BITPACKING
         const u32 byte = i >> 3;
         const u8 bitmask = 0b1 << (i - (byte << 3));
         return brick->voxels[byte] & bitmask;
+#else
+#if USE_HILBERT
+        return brick->voxels[HILBERT_512[i]];
+#else
+        return brick->voxels[i];
+#endif
+#endif
+    };
+
+    /**
+     * @brief Set a voxel in a brick by position.
+     */
+    __forceinline void set_voxel(Brick512* brick, const int3& voxel, const u8 value) const {
+        const u32 i = (voxel.z * 8 * 8) + (voxel.y * 8) + voxel.x;
+#if USE_BITPACKING
+        const u32 byte = i >> 3;
+        const u8 bitmask = 0b1 << (i - (byte << 3));
+        if (value) brick->voxels[byte] |= bitmask;
+        else brick->voxels[byte] ^= bitmask;
+#else
+#if USE_HILBERT
+        brick->voxels[HILBERT_512[i]] = value;
+#else
+        brick->voxels[i] = value;
+#endif
+#endif
     };
 
     /**
@@ -68,7 +105,9 @@ class OVoxelVolume : public Traceable {
     /* Create voxel volume of certain size and fill it with noise */
     OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu = 20.0f);
     ~OVoxelVolume() {
+#if USE_BITPACKING
         delete[] voxels;
+#endif
         delete[] palette;
         delete[] brickmap.bricks;
     }

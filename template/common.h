@@ -21,7 +21,7 @@ constexpr f32 VOXEL = 1.0f / 20.0f;
 #define USE_BVH 1
 
 /* For profiling purposes */
-//#define PROFILING
+#define PROFILING
 
 /* Inline functions */
 static inline f32 _min(const f32 a, const f32 b) { return a < b ? a : b; };

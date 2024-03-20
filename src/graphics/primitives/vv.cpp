@@ -26,7 +26,9 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vp
     /* Initialize the volume */
     grid_size = int3(model->size_y, model->size_z, model->size_x);
     brickmap = Brickmap(grid_size);
+#if USE_BITPACKING
     voxels = new u8[grid_size.x * grid_size.y * grid_size.z]{};
+#endif
     bb = OBB(pos, float3(grid_size) / vpu);
     pivot = bb.size * 0.5f; /* center pivot */
 
@@ -51,9 +53,12 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vp
 OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu)
     : bb(OBB(pos, float3(grid_size) / vpu)),
       brickmap(Brickmap(grid_size)),
-      voxels(new u8[grid_size.x * grid_size.y * grid_size.z]{}),
       grid_size(grid_size),
       vpu(vpu) {
+#if USE_BITPACKING
+    voxels = new u8[grid_size.x * grid_size.y * grid_size.z]{};
+#endif
+
     /* Fill the grid with some noise */
     for (u32 z = 0; z < grid_size.z; z++) {
         for (u32 y = 0; y < grid_size.y; y++) {
@@ -132,7 +137,7 @@ HitInfo OVoxelVolume::intersect(const Ray& ray) const {
                 hit.normal = normalize(TransformVector(hit.normal, bb.model));
                 return hit;
             }
-            
+
             /* Amanatides & Woo */
             /* <http://www.cse.yorku.ca/~amana/research/grid.pdf> */
             if (tmax.x < tmax.y) {
@@ -217,23 +222,20 @@ f32 OVoxelVolume::traverse_brick(const Brick512* brick, const int3& pos, const R
         /* Fetch the active cell */
         const u8 voxel = get_voxel(brick, cell);
         // TODO: all this logic is not great...
+#if USE_BITPACKING
         if (ray.medium_id) {
-            const int3 hitc = (pos << 3) + cell;
-            const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
-            const u8 voxel_id = voxels[i];
-            if (voxel_id != ray.medium_id) {
-                const int3 hitc = (pos << 3) + cell;
-                const u32 i =
-                    (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
-                const u8 voxel_id = voxels[i];
-                hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
-                hit.material = voxel_id;
+             const int3 hitc = (pos << 3) + cell;
+             const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
+             const u8 voxel_id = voxels[i];
+             if (voxel_id != ray.medium_id) {
+                 hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
+                 hit.material = voxel_id;
                 return t / vpu;
             }
         } else if (voxel) {
-            const int3 hitc = (pos << 3) + cell;
-            const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
-            const u8 voxel_id = voxels[i];
+             const int3 hitc = (pos << 3) + cell;
+             const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
+             const u8 voxel_id = voxels[i];
             if (ray.shadow_ray) {
                 // TODO: this is not great...
                 if (voxel_id > 16) {
@@ -256,6 +258,47 @@ f32 OVoxelVolume::traverse_brick(const Brick512* brick, const int3& pos, const R
         } else if (ray.ignore_medium) {
             exited = true;
         }
+#else
+        if (ray.medium_id) {
+            // const int3 hitc = (pos << 3) + cell;
+            // const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
+            // const u8 voxel_id = voxels[i];
+            if (voxel != ray.medium_id) {
+                // const int3 hitc = (pos << 3) + cell;
+                // const u32 i =
+                //     (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
+                // const u8 voxel_id = voxels[i];
+                hit.albedo = RGB8_to_RGBF32(palette[voxel]);
+                hit.material = voxel;
+                return t / vpu;
+            }
+        } else if (voxel) {
+            // const int3 hitc = (pos << 3) + cell;
+            // const u32 i = (hitc.z * grid_size.y * grid_size.x) + (hitc.y * grid_size.x) + hitc.x;
+            // const u8 voxel_id = voxels[i];
+            if (ray.shadow_ray) {
+                // TODO: this is not great...
+                if (voxel > 16) {
+                    hit.albedo = RGB8_to_RGBF32(palette[voxel]);
+                    hit.material = voxel;
+                    return t / vpu;
+                } else {
+                    /* Hacky stohastic absorption */
+                    if (RandomFloat() > 0.85f) {
+                        hit.albedo = RGB8_to_RGBF32(palette[voxel]);
+                        hit.material = voxel;
+                        return t / vpu;
+                    }
+                }
+            } else if (exited || voxel != ray.ignore_medium) {
+                hit.albedo = RGB8_to_RGBF32(palette[voxel]);
+                hit.material = voxel;
+                return t / vpu;
+            }
+        } else if (ray.ignore_medium) {
+            exited = true;
+        }
+#endif
 
         /* Amanatides & Woo */
         /* <http://www.cse.yorku.ca/~amana/research/grid.pdf> */
@@ -303,10 +346,12 @@ void OVoxelVolume::set_voxel(const int3& pos, const u8 value) {
     assert(pos.z >= 0 && pos.z < grid_size.z && "Voxel out of range!");
     const bool removing = value == 0x00;
 
+#if USE_BITPACKING
     { /* Raw voxel data */
         const u32 i = (pos.z * grid_size.y * grid_size.x) + (pos.y * grid_size.x) + pos.x;
         voxels[i] = value;
     }
+#endif
 
     { /* Brick map */
         const int3 bpos = pos >> 3;
@@ -319,30 +364,33 @@ void OVoxelVolume::set_voxel(const int3& pos, const u8 value) {
 
         /* Allocate voxel bits if necessary */
         if (not removing && brick->voxels == nullptr) {
+#if USE_BITPACKING
             brick->voxels = (u8*)MALLOC64(64);
             if (not brick->voxels) return;
             memset(brick->voxels, 0x00, 64);
+#else
+            brick->voxels = (u8*)MALLOC64(512);
+            if (not brick->voxels) return;
+            memset(brick->voxels, 0x00, 512);
+#endif
         }
 
         /* Which bit do we need to update? */
         const int3 inner_pos = pos - (bpos << 3);
-        const u32 ii = (inner_pos.z * 8 * 8) + (inner_pos.y * 8) + inner_pos.x;
-        const u32 byte = ii >> 3;
-        const u8 bitmask = 0b1 << (ii - (byte << 3));
 
         /* Read the voxel bit, and update it */
-        const u8 voxel = brick->voxels[byte] & bitmask;
+        const u8 voxel = get_voxel(brick, inner_pos);
         if (removing) {
             if (voxel != 0x00) {
                 /* Set the voxel to 0 (empty) */
                 brick->voxcnt--;
-                brick->voxels[byte] ^= bitmask;
+                set_voxel(brick, inner_pos, 0);
             }
         } else {
             if (voxel == 0x00) {
                 /* Set the voxel to 1 (solid) */
                 brick->voxcnt++;
-                brick->voxels[byte] |= bitmask;
+                set_voxel(brick, inner_pos, value);
             }
         }
     }

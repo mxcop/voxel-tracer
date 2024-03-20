@@ -33,7 +33,7 @@ void profile_init(Renderer& r) {
         }
     }
 
-    r.bvh = new Bvh(8 * 8 * 8, shapes);
+    r.scene.set_shapes(shapes, 8 * 8 * 8);
 }
 
 /**

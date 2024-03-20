@@ -7,6 +7,6 @@ SkyDome::SkyDome(const char* file_path) {
     sampler = vector<f32>(data, data + (w * h * n));
 
     for (f32& sample : sampler) {
-        sample = sqrtf(sample);
+        sample = sqrtf(sample) * 0.65f;
     }
 }

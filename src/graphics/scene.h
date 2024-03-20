@@ -1,15 +1,13 @@
 #pragma once
 
-/* Number of shapes in the scene */
-constexpr u32 SCENE_SHAPES = 1;
-
 class Scene {
     /* Bounding volume hierarchy */
     Bvh* bvh = nullptr;
     SkyDome skydome;
 
     // TODO: remove polymorphism
-    Traceable* shapes[SCENE_SHAPES];
+    Traceable** shapes = nullptr;
+    u32 shapes_len = 0;
 
    public:
     /* Lighting */
@@ -21,6 +19,10 @@ class Scene {
 
     Scene();
     ~Scene();
+
+#ifdef PROFILING
+    void set_shapes(Traceable** new_shapes, const u32 len);
+#endif
 
     /**
      * @brief Called each frame.

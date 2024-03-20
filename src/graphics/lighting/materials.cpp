@@ -59,8 +59,10 @@ f32 fresnel_reflect(const f32 n1, const f32 n2, const float3& n, const float3& i
 void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& scene,
                 const NoiseSampler& noise) {
     eval.bounces++;
+    constexpr f32 REFRACT_IDX = 1.5f;
+
     /* Entry ray */
-    const float3 entry_dir = refract(hit.normal, ray.dir, 1.0f / 1.125f);
+    const float3 entry_dir = refract(hit.normal, ray.dir, 1.0f / REFRACT_IDX);
     Ray i_ray = Ray(ray.intersection(hit), entry_dir);
     i_ray.medium_id = hit.material;
 
@@ -73,8 +75,6 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
         const HitInfo i_hit = scene.intersect(i_ray);
 
         /* Move the ray to the exit point */
-        if (ray.debug)
-            db::draw_line(i_ray.origin, i_ray.origin + i_ray.dir * i_hit.depth, 0xFF00FF00);
         i_ray.origin += i_ray.dir * i_hit.depth;
 
         /* Beer's law (absorption) */
@@ -82,11 +82,11 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
         const float3 absorb = exp(absorption * absorb_t * 2.0f);
 
         /* Reflect / Refract ratio */
-        float reflect_mul = fresnel_reflect_prob(1.125f, 1.0f, i_ray.dir, i_hit.normal);
+        float reflect_mul = fresnel_reflect_prob(REFRACT_IDX, 1.0f, i_ray.dir, i_hit.normal);
         float refract_mul = 1.0f - reflect_mul;
 
         /* Don't refract if chance is small */
-        if (refract_mul < 0.1f) {
+        if (refract_mul < 0.2f) {
             /* Reflect internally, and nudge forward a bit */
             const float3 int_reflect = reflect(i_ray.dir, i_hit.normal);
             i_ray = Ray(i_ray.origin + int_reflect * 0.001f, int_reflect);
@@ -95,12 +95,10 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
         }
 
         /* Refraction exit ray (scan ray) */
-        const float3 scan_dir = refract(i_hit.normal, i_ray.dir, 1.125f / 1.0f);
-        Ray scan_ray = Ray(i_ray.origin - scan_dir * 0.001f, scan_dir);
+        const float3 scan_dir = refract(i_hit.normal, i_ray.dir, REFRACT_IDX / 1.0f);
+        Ray scan_ray = Ray(i_ray.origin + i_hit.normal * 0.0001f, scan_dir);
         scan_ray.ignore_medium = hit.material;
-        // if (ray.debug) scan_ray.debug = true;
         const HitInfo scan_info = scene.intersect(scan_ray);
-        // if (ray.debug) db::draw_normal(scan_ray.origin, scan_ray.dir, 0xFF00FF00);
 
         MatEval scan_eval = eval;
         if (scan_info.no_hit()) {
@@ -116,7 +114,7 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
         eval.irradiance += scan_eval.irradiance * absorb * refract_mul * mul;
 
         /* Don't reflect if chance is small */
-        if (reflect_mul < 0.1f) {
+        if (reflect_mul < 0.2f || mul < 0.1f) {
             break;
         }
 
@@ -142,11 +140,14 @@ float3 diffuse_light(const float3& p, const float3& n, const Scene& scene,
         irradiance += light.contribution(p, n, scene, noise);
     }
 
-    /* Evaluate the sun light */
-    irradiance += sun_light(p, n, scene, noise);
-
-    /* Evaluate the ambient light */
-    irradiance += ambient_light(p, n, scene, noise);
+    /* Pick one at random 50/50 */
+    if (RandomFloat() <= 0.5f) {
+        /* Evaluate the sun light */
+        irradiance += sun_light(p, n, scene, noise) * 2;
+    } else {
+        /* Evaluate the ambient light */
+        irradiance += ambient_light(p, n, scene, noise) * 2;
+    }
 
     return irradiance;
 }
