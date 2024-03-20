@@ -240,6 +240,13 @@ f32 OVoxelVolume::traverse_brick(const Brick512* brick, const int3& pos, const R
                     hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
                     hit.material = voxel_id;
                     return t / vpu;
+                } else {
+                    /* Hacky stohastic absorption */
+                    if (RandomFloat() > 0.85f) {
+                        hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);
+                        hit.material = voxel_id;
+                        return t / vpu;
+                    }
                 }
             } else if (exited || voxel_id != ray.ignore_medium) {
                 hit.albedo = RGB8_to_RGBF32(palette[voxel_id]);

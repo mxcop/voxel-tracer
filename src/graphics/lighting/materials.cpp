@@ -12,7 +12,7 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
  */
 void eval_material(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& scene,
                    const NoiseSampler& noise) {
-    if (eval.bounces > 4) return;
+    if (eval.bounces > 8) return;
 
     /* Intersection point */
     const float3 i = ray.intersection(hit);
@@ -64,23 +64,35 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
     Ray i_ray = Ray(ray.intersection(hit), entry_dir);
     i_ray.medium_id = hit.material;
 
-    constexpr u32 MAX_REFLECTIONS = 3;
+    constexpr u32 MAX_REFLECTIONS = 4;
+    const float3 absorption = -(1.0f - float3(hit.albedo));
 
-    f32 mul = 1, absorb_t = 0.05f;
+    f32 mul = 1, absorb_t = 0;
     for (u32 i = 0; i < MAX_REFLECTIONS; ++i) {
         /* Find the next internal exit point */
         const HitInfo i_hit = scene.intersect(i_ray);
 
         /* Move the ray to the exit point */
+        if (ray.debug)
+            db::draw_line(i_ray.origin, i_ray.origin + i_ray.dir * i_hit.depth, 0xFF00FF00);
         i_ray.origin += i_ray.dir * i_hit.depth;
 
         /* Beer's law (absorption) */
         absorb_t += i_hit.depth;
-        const float3 absorb = exp(-hit.albedo * absorb_t * 4.0f);
+        const float3 absorb = exp(absorption * absorb_t * 2.0f);
 
         /* Reflect / Refract ratio */
         float reflect_mul = fresnel_reflect_prob(1.125f, 1.0f, i_ray.dir, i_hit.normal);
         float refract_mul = 1.0f - reflect_mul;
+
+        /* Don't refract if chance is small */
+        if (refract_mul < 0.1f) {
+            /* Reflect internally, and nudge forward a bit */
+            const float3 int_reflect = reflect(i_ray.dir, i_hit.normal);
+            i_ray = Ray(i_ray.origin + int_reflect * 0.001f, int_reflect);
+            i_ray.medium_id = hit.material;
+            continue;
+        }
 
         /* Refraction exit ray (scan ray) */
         const float3 scan_dir = refract(i_hit.normal, i_ray.dir, 1.125f / 1.0f);
@@ -102,6 +114,11 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
         /* Apply scan findings */
         eval.albedo += scan_eval.albedo * absorb * refract_mul * mul;
         eval.irradiance += scan_eval.irradiance * absorb * refract_mul * mul;
+
+        /* Don't reflect if chance is small */
+        if (reflect_mul < 0.1f) {
+            break;
+        }
 
         /* Reflect internally, and nudge forward a bit */
         const float3 int_reflect = reflect(i_ray.dir, i_hit.normal);

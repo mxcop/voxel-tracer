@@ -74,7 +74,7 @@ TraceResult Renderer::trace(Ray& ray, const u32 x, const u32 y, bool debug) cons
     eval_material(eval, ray, hit, scene, noise);
     result.albedo = eval.albedo, result.irradiance = fmaxf(eval.irradiance, 0);
 
-    // if (eval.bounces) return result.accumulate();
+    // if (eval.bounces) return result.no_reproject();
     return result;
 }
 
