@@ -77,13 +77,15 @@ void CoherentPacket8x8::draw_slice(const f32 vpu) const {
     /* Draw the floating point slice */
     db::draw_aabb(a_pos * upv, b_pos * upv);
 
-    a_pos[k] = k_t, a_pos[u] = u_min, a_pos[v] = v_min;
-    b_pos[k] = k_t, b_pos[u] = u_max, b_pos[v] = v_max;
+    const i128 islice = _mm_cvttps_epi32(slice);
+
+    a_pos[k] = k_t, a_pos[u] = islice.m128i_u32[0], a_pos[v] = islice.m128i_u32[2];
+    b_pos[k] = k_t, b_pos[u] = islice.m128i_u32[1], b_pos[v] = islice.m128i_u32[3];
     b_pos[k] += 1, b_pos[u] += 1, b_pos[v] += 1;
 
     /* The minimum and maximum cell of the slice in the grid */
-    const float3 cell_min = floorf(a_pos) * upv;
-    const float3 cell_max = floorf(b_pos) * upv;
+    const float3 cell_min = a_pos * upv;
+    const float3 cell_max = b_pos * upv;
 
     /* Draw the grid slice */
     db::draw_aabb(cell_min, cell_max, 0xFFFF0000);
