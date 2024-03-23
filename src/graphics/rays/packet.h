@@ -8,10 +8,19 @@
 struct alignas(64) CoherentPacked8x8 {
     /* [du_min, du_max, dv_min, dv_max] */
     /* Factor by which the slice grows each step. */
-    const f128 delta_slice;
+    f128 delta_slice;
     /* [u_min, u_max, v_min, v_max] */
     /* Extend of the current slice. */
-    f128 slice;
+    union {
+        f128 xmm;
+        struct {
+            f32 u_min, u_max, v_min, v_max;
+        };
+    } slice;
+    /* Traversal axis. */
+    u32 k, u, v;
+    /* Distance along major axis. */
+    f32 k_t = 0;
 
     /* Packet origin point. */
     float3 origin;
@@ -22,7 +31,13 @@ struct alignas(64) CoherentPacked8x8 {
 
     bool setup_slice(const float3& min, const float3& max, const f32 vpu);
 
+    void traverse(const float3& min, const float3& max, const f32 vpu);
+
    private:
+    // FOR TESTING ONLY
+    void draw_slice(const f32 vpu) const;
+
+    __forceinline i32 getsign(const f32 f) const { return (i32)(((u32&)f) >> 31) * 2 - 1; }
     f32 entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const;
 };
 

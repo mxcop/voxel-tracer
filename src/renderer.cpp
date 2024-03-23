@@ -186,6 +186,7 @@ void Renderer::gui(f32 dt) {
     trace(dev::debug_ray, 0, 0, true);
     db::draw_aabb(0, 1, 0xFFFF0000);
     dev::debug_packet.setup_slice(0, 1, 32);
+    dev::debug_packet.traverse(0, 1, 32);
 }
 
 void Renderer::shutdown() {
