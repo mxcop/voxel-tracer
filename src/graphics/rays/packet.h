@@ -22,12 +22,6 @@ struct alignas(64) CoherentPacket8x8 {
             f32 u_min, u_max, v_min, v_max;
         };
     };
-    union {
-        f128 next_slice;
-        struct {
-            f32 nu_min, nu_max, nv_min, nv_max;
-        };
-    };
     /* Traversal axis. */
     u32 k, u, v;
     /* Distance along major axis. */
