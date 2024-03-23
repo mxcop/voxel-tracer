@@ -1,12 +1,12 @@
 #pragma once
 
-#include <curves/hilbert.h>
+#include "curves/hilbert.h"
 
 /* Does not seem to yield any significant improvements */
 #define USE_HILBERT 0
 
 /* Seems to be slower */
-#define USE_BITPACKING 1
+#define USE_BITPACKING 0
 
 /**
  * @brief A grid of voxels with rotation.
@@ -16,7 +16,7 @@ class OVoxelVolume : public Traceable {
     OBB bb;
     float3 pivot;
 
-    /* 8x8x8 voxels, 512 bits, 64 bytes, 1 bit each. (solid | empty) */
+    /* 8x8x8 voxels */
     struct Brick512 {
         u8* voxels = nullptr; /* Can be null! */
         u16 voxcnt = 0;

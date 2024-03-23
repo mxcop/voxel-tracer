@@ -5,10 +5,6 @@ class SkyDome {
     vector<f32> sampler;
     i32 w, h, n;
 
-   public:
-    SkyDome() = default;
-    SkyDome(const char* file_path);
-
     /* Source : <https://gist.github.com/volkansalma/2972237> */
     __forceinline f32 atan2_approx(const f32 y, const f32 x) const {
         // http://pubs.opengroup.org/onlinepubs/009695399/functions/atan2.html
@@ -31,6 +27,10 @@ class SkyDome {
         else
             return (angle);
     }
+
+   public:
+    SkyDome() = default;
+    SkyDome(const char* file_path);
 
     float3 sample_dir(float3 dir) const {
         const u32 u = floor(w * atan2_approx(dir.z, dir.x) * INV2PI - 0.5f);

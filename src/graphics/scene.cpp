@@ -2,10 +2,10 @@
 
 Scene::Scene() {
     /* Material testing shape */
-    shapes_len = 2;
+    shapes_len = 1;
     shapes = new Traceable* [shapes_len] {};
-    shapes[0] = new AABB({-50, -2, -50}, {50, -1, 50}, {1, 1, 1});
-    shapes[1] = new OVoxelVolume(0, "assets/vox/testing/glass-box.vox");
+    shapes[0] = new OVoxelVolume(0, "assets/vox/testing/glass-box.vox");
+    //shapes[1] = new AABB({-50, -2, -50}, {50, -1, 50}, {1, 1, 1});
 
     /* Initialize the BVH */
     bvh = new Bvh(shapes_len, shapes);

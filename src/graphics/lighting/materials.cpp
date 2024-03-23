@@ -66,7 +66,7 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
     Ray i_ray = Ray(ray.intersection(hit), entry_dir);
     i_ray.medium_id = hit.material;
 
-    constexpr u32 MAX_REFLECTIONS = 4;
+    constexpr u32 MAX_REFLECTIONS = 8;
     const float3 absorption = -(1.0f - float3(hit.albedo));
 
     f32 mul = 1, absorb_t = 0;
@@ -79,11 +79,11 @@ void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& 
 
         /* Beer's law (absorption) */
         absorb_t += i_hit.depth;
-        const float3 absorb = exp(absorption * absorb_t * 2.0f);
+        const float3 absorb = exp(absorption * 2.0f * absorb_t);
 
         /* Reflect / Refract ratio */
-        float reflect_mul = fresnel_reflect_prob(REFRACT_IDX, 1.0f, i_ray.dir, i_hit.normal);
-        float refract_mul = 1.0f - reflect_mul;
+        const f32 reflect_mul = fresnel_reflect_prob(REFRACT_IDX, 1.0f, i_ray.dir, i_hit.normal);
+        const f32 refract_mul = 1.0f - reflect_mul;
 
         /* Don't refract if chance is small */
         if (refract_mul < 0.2f) {
@@ -141,13 +141,13 @@ float3 diffuse_light(const float3& p, const float3& n, const Scene& scene,
     }
 
     /* Pick one at random 50/50 */
-    if (RandomFloat() <= 0.5f) {
+    //if (RandomFloat() <= 0.5f) {
         /* Evaluate the sun light */
-        irradiance += sun_light(p, n, scene, noise) * 2;
-    } else {
+        irradiance += sun_light(p, n, scene, noise);
+    //} else {
         /* Evaluate the ambient light */
-        irradiance += ambient_light(p, n, scene, noise) * 2;
-    }
+        irradiance += ambient_light(p, n, scene, noise);
+    //}
 
     return irradiance;
 }
