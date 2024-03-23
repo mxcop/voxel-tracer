@@ -4,14 +4,18 @@ Scene::Scene() {
     /* Material testing shape */
     shapes_len = 1;
     shapes = new Traceable* [shapes_len] {};
-    shapes[0] = new OVoxelVolume(0, "assets/vox/testing/glass-box.vox");
-    //shapes[1] = new AABB({-50, -2, -50}, {50, -1, 50}, {1, 1, 1});
+    shapes[0] = new OVoxelVolume(0, 32, 32);
+    // shapes[0] = new OVoxelVolume(0, "assets/vox/testing/glass-box.vox");
+    // shapes[1] = new AABB({-50, -2, -50}, {50, -1, 50}, {1, 1, 1});
 
     /* Initialize the BVH */
     bvh = new Bvh(shapes_len, shapes);
 
     /* Load the HDR skydome */
     skydome = SkyDome("assets/kiara_1_dawn_4k.hdr");
+
+    // TEMP: testing
+    cvv = new CoherentVoxelVolume(0, 32, 32);
 }
 
 Scene::~Scene() {

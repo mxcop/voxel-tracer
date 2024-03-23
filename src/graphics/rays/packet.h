@@ -1,5 +1,31 @@
 #pragma once
 
+//struct ext {
+//    f32 min, max;
+//};
+
+/* Coherent ray packet 4x4, cache line aligned. */
+struct alignas(64) CoherentPacked8x8 {
+    /* [du_min, du_max, dv_min, dv_max] */
+    /* Factor by which the slice grows each step. */
+    const f128 delta_slice;
+    /* [u_min, u_max, v_min, v_max] */
+    /* Extend of the current slice. */
+    f128 slice;
+
+    /* Packet origin point. */
+    float3 origin;
+    /* Packet ray directions. */
+    float3 rays[4 * 4];
+    /* Packet direction signs. */
+    // float3 signs;
+
+    bool setup_slice(const float3& min, const float3& max, const f32 vpu);
+
+   private:
+    f32 entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const;
+};
+
 /* SIMD (SSE) Ray packet structure. */
 struct alignas(64) RayPacket128 {
     union {

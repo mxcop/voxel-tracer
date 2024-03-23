@@ -67,9 +67,9 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 v
                 const f32 noise =
                     noise3D((f32)x / grid_size.x, (f32)y / grid_size.y, (f32)z / grid_size.z);
                 if (noise > 0.09f) {
-                    set_voxel(int3(x, y, z), 0xFF);
+                    set_voxel(int3(x, y, z), 16);
                 } else {
-                    set_voxel(int3(x, y, z), 0x00);
+                    set_voxel(int3(x, y, z), 0);
                 }
             }
         }

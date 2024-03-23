@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primitives/cvv.h"
+
 class Scene {
     /* Bounding volume hierarchy */
     Bvh* bvh = nullptr;
@@ -8,6 +10,9 @@ class Scene {
     // TODO: remove polymorphism
     Traceable** shapes = nullptr;
     u32 shapes_len = 0;
+
+    // TEMP: testing coherent traversal
+    CoherentVoxelVolume* cvv = nullptr;
 
    public:
     /* Lighting */
