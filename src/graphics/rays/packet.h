@@ -5,18 +5,23 @@
 //};
 
 /* Coherent ray packet 4x4, cache line aligned. */
-struct alignas(64) CoherentPacked8x8 {
+struct alignas(64) CoherentPacket8x8 {
     /* [du_min, du_max, dv_min, dv_max] */
     /* Factor by which the slice grows each step. */
-    f128 delta_slice;
+    union {
+        f128 delta_slice;
+        struct {
+            f32 du_min, du_max, dv_min, dv_max;
+        };
+    };
     /* [u_min, u_max, v_min, v_max] */
     /* Extend of the current slice. */
     union {
-        f128 xmm;
+        f128 slice;
         struct {
             f32 u_min, u_max, v_min, v_max;
         };
-    } slice;
+    };
     /* Traversal axis. */
     u32 k, u, v;
     /* Distance along major axis. */
@@ -29,7 +34,7 @@ struct alignas(64) CoherentPacked8x8 {
     /* Packet direction signs. */
     // float3 signs;
 
-    bool setup_slice(const float3& min, const float3& max, const f32 vpu);
+    void setup_slice(const float3& min, const float3& max, const f32 vpu);
 
     void traverse(const float3& min, const float3& max, const f32 vpu);
 

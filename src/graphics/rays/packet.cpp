@@ -2,11 +2,10 @@
 
 #include "dev/debug.h"
 
-bool CoherentPacked8x8::setup_slice(const float3& min, const float3& max, const f32 vpu) {
-    // TODO: setup slice for traversal.
-
+void CoherentPacket8x8::setup_slice(const float3& min, const float3& max, const f32 vpu) {
     /* Grab the 2 corner rays */
     const float3 ray_tl = rays[0], ray_br = rays[15];
+    const f32 upv = 1.0f / vpu;
 
     /* Packet major axis */
     k = major_axis(ray_tl);
@@ -15,74 +14,77 @@ bool CoherentPacked8x8::setup_slice(const float3& min, const float3& max, const 
     v = ~(k | u) & 0b11;
 
     /* Find intersection time of U and V rays */
-    const f32 entry_u = entry(origin[k], ray_br[k], min[k], max[k]);
-    const f32 entry_v = entry(origin[k], ray_tl[k], min[k], max[k]);
-    k_t = origin[k] + ray_br[k] * entry_u;
+    const f32 entry_br = entry(origin[k], ray_br[k], min[k], max[k]);
+    const f32 entry_tl = entry(origin[k], ray_tl[k], min[k], max[k]);
 
-    const f32 upv = 1.0f / vpu;
-    const f32 next_u = entry(origin[k], ray_br[k], min[k] + upv, max[k] - upv);
-    const f32 next_v = entry(origin[k], ray_tl[k], min[k] + upv, max[k] - upv);
+    /* Find next intersection time of U and V rays (used for slice delta) */
+    const f32 next_br = entry(origin[k], ray_br[k], min[k] + upv, max[k] - upv);
+    const f32 next_tl = entry(origin[k], ray_tl[k], min[k] + upv, max[k] - upv);
 
-    /* Slice U and V minimum and maximum */
-    const f32 u_min = origin[v] + ray_br[v] * entry_u;
-    const f32 u_max = origin[u] + ray_br[u] * entry_u;
-    const f32 v_min = origin[u] + ray_tl[u] * entry_v;
-    const f32 v_max = origin[v] + ray_tl[v] * entry_v;
+    /* Entry time along major axis K */
+    k_t = (origin[k] + ray_br[k] * entry_br) * vpu;
 
-    /* Slice U and V delta */
-    const f32 du_min = (origin[v] + ray_br[v] * next_u) - u_min;
-    const f32 du_max = (origin[u] + ray_br[u] * next_u) - u_max;
-    const f32 dv_min = (origin[u] + ray_tl[u] * next_v) - v_min;
-    const f32 dv_max = (origin[v] + ray_tl[v] * next_v) - v_max;
+    /* Top left and bottom right UV entry points */
+    const f32 u_tl = (origin[u] + ray_tl[u] * entry_tl) * vpu;
+    const f32 u_br = (origin[u] + ray_br[u] * entry_br) * vpu;
+    const f32 v_tl = (origin[v] + ray_tl[v] * entry_tl) * vpu;
+    const f32 v_br = (origin[v] + ray_br[v] * entry_br) * vpu;
 
-    /* Slice U and V point */
-    float3 u_pos;
-    u_pos[k] = k_t;
-    u_pos[u] = u_max, u_pos[v] = u_min;
-    float3 v_pos;
-    v_pos[k] = k_t;
-    v_pos[u] = v_min, v_pos[v] = v_max;
+    /* Top left and bottom right UV next points */
+    const f32 nu_tl = (origin[u] + ray_tl[u] * next_tl) * vpu;
+    const f32 nu_br = (origin[u] + ray_br[u] * next_br) * vpu;
+    const f32 nv_tl = (origin[v] + ray_tl[v] * next_tl) * vpu;
+    const f32 nv_br = (origin[v] + ray_br[v] * next_br) * vpu;
 
-    slice.xmm = _mm_setr_ps(u_min, u_max, v_min, v_max);
-    delta_slice = _mm_setr_ps(du_min, du_max, dv_min, dv_max);
+    /* Minimum and maximum UV */
+    u_min = fminf(u_tl, u_br), u_max = fmaxf(u_tl, u_br);
+    v_min = fminf(v_tl, v_br), v_max = fmaxf(v_tl, v_br);
 
-    // draw_slice();
-
-    return true;
+    /* Slice UV deltas */
+    du_min = fminf(nu_tl, nu_br) - u_min;
+    du_max = fmaxf(nu_tl, nu_br) - u_max;
+    dv_min = fminf(nv_tl, nv_br) - v_min;
+    dv_max = fmaxf(nv_tl, nv_br) - v_max;
 }
 
-void CoherentPacked8x8::traverse(const float3& min, const float3& max, const f32 vpu) {
+void CoherentPacket8x8::traverse(const float3& min, const float3& max, const f32 vpu) {
     const f32 sign = -getsign(rays[0][k]);
-    const f32 upv = (1.0f / vpu) * sign;
-    const f32 min_t = sign ? min[k] : max[k];
-    const f32 max_t = sign ? max[k] : min[k];
-    k_t += upv * 0.01f;
-    for (k_t; k_t < max_t && k_t > min_t; k_t += upv) {
-        slice.xmm = _mm_add_ps(slice.xmm, delta_slice);
+    // const f32 upv = (1.0f / vpu) * sign;
+    const f32 min_t = (sign ? min[k] : max[k]) * vpu;
+    const f32 max_t = (sign ? max[k] : min[k]) * vpu;
+    k_t += sign * 0.01f;
+    for (k_t; k_t >= min_t && k_t < max_t; k_t += sign) {
         draw_slice(vpu);
+        slice = _mm_add_ps(slice, delta_slice);
     }
 }
 
-void CoherentPacked8x8::draw_slice(const f32 vpu) const {
-    float3 a_pos;
-    a_pos[k] = k_t, a_pos[u] = slice.u_max, a_pos[v] = slice.u_min;
-    float3 b_pos;
-    b_pos[k] = k_t, b_pos[u] = slice.v_min, b_pos[v] = slice.v_max;
+void CoherentPacket8x8::draw_slice(const f32 vpu) const {
+    float3 a_pos = 0;
+    a_pos[k] = k_t, a_pos[u] = u_min, a_pos[v] = v_min;
+    float3 b_pos = 0;
+    b_pos[k] = k_t, b_pos[u] = u_max, b_pos[v] = v_max;
 
     const f32 sign = -getsign(rays[0][k]);
     const f32 upv = 1.0f / vpu;
-    b_pos[k] += upv * sign + upv * 0.01f;
-    db::draw_aabb(a_pos, b_pos);
+    b_pos[k] += sign;
+    /* Draw the floating point slice */
+    db::draw_aabb(a_pos * upv, b_pos * upv);
 
-    db::draw_aabb(floorf(a_pos * vpu) * upv, floorf(b_pos * vpu) * upv + upv, 0xFFFF0000);
+    a_pos[k] = k_t, a_pos[u] = u_min, a_pos[v] = v_min;
+    b_pos[k] = k_t, b_pos[u] = u_max, b_pos[v] = v_max;
+    b_pos[k] += sign, b_pos[u] += 1, b_pos[v] += 1;
+
+    /* Draw the grid slice */
+    db::draw_aabb(floorf(a_pos) * upv, floorf(b_pos) * upv, 0xFFFF0000);
 }
 
-f32 CoherentPacked8x8::entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const {
+f32 CoherentPacket8x8::entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const {
     bool sign = rd < 0.0f;
     const f32 bmin = sign ? max : min;
     // TODO: maybe try getting rid of division here?
     const f32 dmin = (bmin - ro) / rd;
-    return fmaxf(dmin, 0.0f);
+    return dmin;  // fmaxf(dmin, 0.0f);
 }
 
 // ext CoherentPacked8x8::intersection(const float3& rd, const float3& min, const float3& max) const
