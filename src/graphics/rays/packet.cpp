@@ -90,11 +90,9 @@ void CoherentPacket8x8::draw_slice(const f32 vpu) const {
 }
 
 f32 CoherentPacket8x8::entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const {
-    bool sign = rd < 0.0f;
+    const bool sign = (rd < 0);
     const f32 bmin = sign ? max : min;
-    // TODO: maybe try getting rid of division here?
-    const f32 dmin = (bmin - ro) / rd;
-    return dmin;  // fmaxf(dmin, 0.0f);
+    return (bmin - ro) / rd;  // TODO: maybe try getting rid of division here?
 }
 
 // ext CoherentPacked8x8::intersection(const float3& rd, const float3& min, const float3& max) const

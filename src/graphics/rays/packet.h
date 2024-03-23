@@ -1,9 +1,5 @@
 #pragma once
 
-//struct ext {
-//    f32 min, max;
-//};
-
 /* Coherent ray packet 4x4, cache line aligned. */
 struct alignas(64) CoherentPacket8x8 {
     /* [du_min, du_max, dv_min, dv_max] */
@@ -31,8 +27,6 @@ struct alignas(64) CoherentPacket8x8 {
     float3 origin;
     /* Packet ray directions. */
     float3 rays[4 * 4];
-    /* Packet direction signs. */
-    // float3 signs;
 
     void setup_slice(const float3& min, const float3& max, const f32 vpu);
 

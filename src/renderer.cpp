@@ -239,7 +239,7 @@ inline float4 Renderer::insert_accu_raw(const u32 x, const u32 y, const Ray& ray
 
     /* Reproject (color.w is the depth) */
     float4 acc_color = c;
-    f32 confidence = 0.9f;
+    f32 confidence = 0.95f;
     if (c.w < BIG_F32) {
         const float2 prev_uv = camera.prev_pyramid.project(ray.origin + ray.dir * c.w);
 
