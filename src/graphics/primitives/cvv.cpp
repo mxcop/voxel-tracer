@@ -67,7 +67,7 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
     const f32 next_tl = entry(origin[k], ray_tl[k], k_min + upv, k_max - upv);
 
     /* Entry time along major axis K */
-    f32 k_t = (origin[k] + ray_br[k] * entry_br) * vpu;
+    f32 k_t = (origin[k] + ray_tl[k] * entry_tl) * vpu;
 
     /* Top left & bottom right U,V entry points */
     const f32 u_tl = (origin[u] + ray_tl[u] * entry_tl) * vpu;
@@ -116,8 +116,8 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
 
     /* Time to trace! */
     const f32 sign = -getsign(ray_tl[k]);
-    const f32 sign_u = -getsign(ray_tl[u]);
-    const f32 sign_v = -getsign(ray_tl[v]);
+    const f32 sign_u = fmaxf(getsign(ray_tl[u]), 0);
+    const f32 sign_v = fmaxf(getsign(ray_tl[v]), 0);
     // const f32 min_t = (sign ? k_min : k_max) * vpu;
     // const f32 max_t = (sign ? k_max : k_min) * vpu;
     const f32 min_t = k_min * vpu;
@@ -128,19 +128,23 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
 
     for (k_t; k_t > min_t && k_t < max_t; k_t += sign) {
         slice = _mm_add_ps(slice, delta_slice);
-        const i128 islice = _mm_cvttps_epi32(slice);
+        const i128 islice = _mm_cvtps_epi32(slice);
 
         float3 min_p, max_p;
         min_p[k] = k_t, min_p[u] = islice.m128i_i32[0], min_p[v] = islice.m128i_i32[2];
         max_p[k] = k_t, max_p[u] = islice.m128i_i32[1], max_p[v] = islice.m128i_i32[3];
 
+        /* Skip any slice 100% outside the grid */
+        // if (max_p[u] < 0 || max_p[v] < 0) continue;
+        // if (min_p[u] > grid_size[u] || min_p[v] > grid_size[v]) continue;
+
         /* Draw the grid slice */
-        //if (debug) {
-        //    /* DEBUG DRAW */
-        //    float3 a_pos, b_pos;
-        //    a_pos[k] = k_t, a_pos[u] = islice.m128i_i32[0], a_pos[v] = islice.m128i_i32[2];
-        //    b_pos[k] = k_t, b_pos[u] = islice.m128i_i32[1], b_pos[v] = islice.m128i_i32[3];
-        //    b_pos[k] += sign, b_pos[u] += 1, b_pos[v] += 1;
+        // if (debug) {
+        //     /* DEBUG DRAW */
+        //     float3 a_pos, b_pos;
+        //     a_pos[k] = k_t, a_pos[u] = islice.m128i_i32[0], a_pos[v] = islice.m128i_i32[2];
+        //     b_pos[k] = k_t, b_pos[u] = islice.m128i_i32[1], b_pos[v] = islice.m128i_i32[3];
+        //     b_pos[k] += sign, b_pos[u] += 1, b_pos[v] += 1;
 
         //    /* The minimum and maximum cell of the slice in the grid */
         //    const float3 cell_min = min_p * upv;
@@ -150,24 +154,22 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
         //}
 
         /* Clamp the slice inside the grid extend */
-        if (max_p[u] <= 0 || max_p[v] <= 0) continue;
-        if (min_p[u] > grid_size[u] || min_p[v] > grid_size[v]) continue;
-        const f32 y_min = fmaxf(0, min_p[v]);
-        const f32 y_max = fminf(grid_size[v], max_p[v] + 1);
-        const f32 x_min = fmaxf(0, min_p[u]);
-        const f32 x_max = fminf(grid_size[u], max_p[u] + 1);
+        const f32 y_min = islice.m128i_i32[2];  // fmaxf(0, min_p[v]);
+        const f32 y_max = islice.m128i_i32[3];  // fminf(grid_size[v], max_p[v]);
+        const f32 x_min = islice.m128i_i32[0];  // fmaxf(0, min_p[u]);
+        const f32 x_max = islice.m128i_i32[1];  // fminf(grid_size[u], max_p[u]);
 
-        if (debug) {
-            float3 cell_min, cell_max;
-            cell_min[k] = k_t, cell_min[u] = x_min, cell_min[v] = y_min;
-            cell_max[k] = k_t + sign, cell_max[u] = x_max, cell_max[v] = y_max;
+        // if (debug) {
+        //     float3 cell_min, cell_max;
+        //     cell_min[k] = k_t, cell_min[u] = x_min, cell_min[v] = y_min;
+        //     cell_max[k] = k_t + sign, cell_max[u] = x_max + 1, cell_max[v] = y_max + 1;
 
-            db::draw_aabb(cell_min * upv, cell_max * upv, 0xFFFF0000);
-        }
+        //    db::draw_aabb(cell_min * upv, cell_max * upv, 0xFFFF0000);
+        //}
 
         /* Iterate over cells in slice */
-        for (u32 y = y_min; y < y_max; y++) {
-            for (u32 x = x_min; x < x_max; x++) {
+        for (u32 y = y_min; y <= y_max; y++) {
+            for (u32 x = x_min; x <= x_max; x++) {
                 uint3 i; /* Cell coordinate */
                 i[k] = k_t, i[u] = x, i[v] = y;
 
@@ -177,16 +179,19 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
                     c_pos[k] = k_t, c_pos[u] = x, c_pos[v] = y;
                     d_pos[k] = k_t, d_pos[u] = x, d_pos[v] = y;
                     d_pos[k] += sign, d_pos[u] += 1, d_pos[v] += 1;
-                    // db::draw_aabb(c_pos * upv, d_pos * upv, 0xFF00FF00);
+                    db::draw_aabb(c_pos * upv, d_pos * upv, 0xFF00FF00);
                 }
+
+                if (x < 0 || y < 0) continue;
+                if (x >= grid_size[u] || y >= grid_size[v]) continue;
 
                 /* If the cell is a solid voxel */
                 if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
                     // TESTING
-                    //for (u32 r = 0; r < 4 * 4; r++) {
-                    //    hit.depth[r] = k_t;
-                    //}
-                    //return hit;
+                    for (u32 r = 0; r < 4 * 4; r++) {
+                        hit.depth[r] = 100.0f;
+                    }
+                    return hit;
                     // TESTING
 
                     /* Find which rays intersect this voxel */
@@ -201,8 +206,8 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
                         // TODO: maybe don't do this transform every time?
                         const float3 rd = TransformVector(packet.rays[r], bb.imodel);
                         const float3 grid_o = origin * vpu;
-                        const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t) + 0.1f;
-                        const f32 exit_t = entry(grid_o[k], rd[k], k_t + sign, k_t + sign) - 0.1f;
+                        const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t);
+                        const f32 exit_t = entry(grid_o[k], rd[k], k_t + sign, k_t + sign);
 
                         /* Ray entry and exit point in the grid slice */
                         const int3 entry_p = floori(grid_o + rd * entry_t);
