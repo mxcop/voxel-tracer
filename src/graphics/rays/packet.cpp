@@ -2,7 +2,7 @@
 
 #include "dev/debug.h"
 
-void CoherentPacket8x8::setup_slice(const float3& min, const float3& max, const f32 vpu) {
+void CoherentPacket4x4::setup_slice(const float3& min, const float3& max, const f32 vpu) {
     /* Grab the 2 corner rays */
     const float3 ray_tl = rays[0], ray_br = rays[15];
     const f32 upv = 1.0f / vpu;
@@ -53,7 +53,7 @@ void CoherentPacket8x8::setup_slice(const float3& min, const float3& max, const 
     v_min = fminf(v_min, nv_min), v_max = fmaxf(v_max, nv_max);
 }
 
-void CoherentPacket8x8::traverse(const float3& min, const float3& max, const f32 vpu) {
+void CoherentPacket4x4::traverse(const float3& min, const float3& max, const f32 vpu) {
     const f32 sign = -getsign(rays[0][k]);
     // const f32 upv = (1.0f / vpu) * sign;
     const f32 min_t = (sign ? min[k] : max[k]) * vpu;
@@ -65,7 +65,7 @@ void CoherentPacket8x8::traverse(const float3& min, const float3& max, const f32
     }
 }
 
-void CoherentPacket8x8::draw_slice(const f32 vpu) const {
+void CoherentPacket4x4::draw_slice(const f32 vpu) const {
     float3 a_pos = 0;
     a_pos[k] = k_t, a_pos[u] = u_min, a_pos[v] = v_min;
     float3 b_pos = 0;
@@ -91,7 +91,7 @@ void CoherentPacket8x8::draw_slice(const f32 vpu) const {
     db::draw_aabb(cell_min, cell_max, 0xFFFF0000);
 }
 
-f32 CoherentPacket8x8::entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const {
+f32 CoherentPacket4x4::entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const {
     const bool sign = (rd < 0);
     const f32 bmin = sign ? max : min;
     return (bmin - ro) / rd;  // TODO: maybe try getting rid of division here?

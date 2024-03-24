@@ -1,7 +1,7 @@
 #pragma once
 
 /* Coherent ray packet 4x4, cache line aligned. */
-struct alignas(64) CoherentPacket8x8 {
+struct alignas(64) CoherentPacket4x4 {
     /* [du_min, du_max, dv_min, dv_max] */
     /* Factor by which the slice grows each step. */
     union {

@@ -94,6 +94,8 @@ void Renderer::tick(f32 dt) {
 #ifndef PROFILING
 #pragma omp parallel for schedule(dynamic)
 #endif
+    
+#if 0
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
             Ray ray = camera.get_primary_ray(x, y);
@@ -122,6 +124,29 @@ void Renderer::tick(f32 dt) {
             screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
         }
     }
+#else
+    for (i32 y = 0; y < WIN_HEIGHT; y += 4) {
+        for (i32 x = 0; x < WIN_WIDTH; x += 4) {
+            CoherentPacket4x4 packet;
+            packet.origin = camera.pos;
+            for (u32 v = 0; v < 4; v++) {
+                for (u32 u = 0; u < 4; u++) {
+                    packet.rays[v * 4 + u] =
+                        camera.get_primary_ray(x + u, y + v).dir;
+                }
+            }
+
+            const CoherentHit4x4 hits = scene.cvv->intersect(packet);
+
+            for (u32 v = 0; v < 4; v++) {
+                for (u32 u = 0; u < 4; u++) {
+                    const float4 c = hits.depth[v * 4 + u] * 0.005f;
+                    screen->pixels[(x + u) + (y + v) * WIN_WIDTH] = RGBF32_to_RGB8(&c);
+                }
+            }
+        }
+    }
+#endif
 
 #if DENOISE
     /* Blur */
@@ -186,7 +211,8 @@ void Renderer::gui(f32 dt) {
     trace(dev::debug_ray, 0, 0, true);
     db::draw_aabb(0, 1, 0xFFFF0000);
     dev::debug_packet.setup_slice(0, 1, 32);
-    dev::debug_packet.traverse(0, 1, 32);
+    scene.cvv->intersect(dev::debug_packet, true);
+    // dev::debug_packet.traverse(0, 1, 32);
 }
 
 void Renderer::shutdown() {

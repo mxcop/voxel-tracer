@@ -18,6 +18,8 @@ class CoherentVoxelVolume {
     /* Voxels per unit. */
     f32 vpu;
 
+    __forceinline i32 getsign(const f32 f) const { return (i32)(((u32&)f) >> 31) * 2 - 1; }
+
     void set_voxel(const u32 x, const u32 y, const u32 z, const u8 mat);
 
    public:
@@ -37,7 +39,7 @@ class CoherentVoxelVolume {
     CoherentVoxelVolume& operator=(CoherentVoxelVolume&&) = default;
 
     /* Trace-able functions */
-    HitInfo intersect(const Ray& ray) const;
+    CoherentHit4x4 intersect(const CoherentPacket4x4& packet, const bool debug = false) const;
 
     inline void set_pivot(const float3 pivot) { bb.pivot = pivot, this->pivot = pivot; };
     inline void set_rotation(const quat& rot) { bb.set_rotation_pivot(pivot, rot); };

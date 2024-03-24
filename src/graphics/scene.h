@@ -11,12 +11,12 @@ class Scene {
     Traceable** shapes = nullptr;
     u32 shapes_len = 0;
 
-    // TEMP: testing coherent traversal
-    CoherentVoxelVolume* cvv = nullptr;
-
    public:
     /* Lighting */
     vector<SphereLight> lights;
+
+    // TEMP: testing coherent traversal
+    CoherentVoxelVolume* cvv = nullptr;
 
     /* Direction pointing towards the sun */
     const float3 sun_dir = {-0.619501f, 0.465931f, -0.631765f};

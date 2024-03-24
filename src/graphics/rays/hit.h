@@ -17,3 +17,13 @@ struct PacketHitInfo {
     f128 exit_t;
     u32 steps = 0; /* For debugging! */
 };
+
+struct alignas(64) CoherentHit4x4 {
+    f32 depth[4 * 4] = {};
+
+    CoherentHit4x4() {
+        for (u32 r = 0; r < 4*4; r++) {
+            depth[r] = BIG_F32;
+        }
+    }
+};
