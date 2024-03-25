@@ -118,8 +118,8 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
     dv_min = nv_min - v_min, dv_max = nv_max - v_max;
 
     /* Slice entry U,V */
-    u_min = fminf(u_min, nu_min) + 0.01f, u_max = fmaxf(u_max, nu_max) - 0.01f;
-    v_min = fminf(v_min, nv_min) + 0.01f, v_max = fmaxf(v_max, nv_max) - 0.01f;
+    u_min = fminf(u_min, nu_min), u_max = fmaxf(u_max, nu_max);
+    v_min = fminf(v_min, nv_min), v_max = fmaxf(v_max, nv_max);
 
     /* Time to trace! */
     const f32 sign = -getsign(ray_tl[k]);
@@ -127,61 +127,53 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
     const f32 max_t = k_max * vpu;
     k_t += sign * 0.01f;
 
-    /* Move back by 1 slice, important for fixing offset! */
+    /* Move back by 1 slice, because we first move then check! */
     slice = _mm_sub_ps(slice, delta_slice);
 
     for (k_t; k_t > min_t && k_t < max_t; k_t += sign) {
+        /* Move to the next slice */
         slice = _mm_add_ps(slice, delta_slice);
-        const i128 islice = _mm_cvtps_epi32(slice);
+
+        /* Truncate the floating point slice */
+        const f128 fslice = _mm_floor_ps(slice);
+        const i128 islice = _mm_cvttps_epi32(fslice);
 
         /* Clamp the slice inside the grid extend */
-        const i32 y_min = islice.m128i_i32[2];  // fmaxf(0, min_p[v]);
-        const i32 y_max = islice.m128i_i32[3];  // fminf(grid_size[v], max_p[v]);
-        const i32 x_min = islice.m128i_i32[0];  // fmaxf(0, min_p[u]);
-        const i32 x_max = islice.m128i_i32[1];  // fminf(grid_size[u], max_p[u]);
+        const i32 y_min = islice.m128i_i32[2];
+        const i32 y_max = islice.m128i_i32[3];
+        const i32 x_min = islice.m128i_i32[0];
+        const i32 x_max = islice.m128i_i32[1];
 
         /* Skip any slice 100% outside the grid */
         if (x_max < 0 || y_max < 0) continue;
         if (x_min > grid_size[u] || y_min > grid_size[v]) continue;
 
-        // if (debug) {
-        //     float3 cell_min, cell_max;
-        //     cell_min[k] = k_t, cell_min[u] = x_min, cell_min[v] = y_min;
-        //     cell_max[k] = k_t + sign, cell_max[u] = x_max + 1, cell_max[v] = y_max + 1;
-
-        //    db::draw_aabb(cell_min * upv, cell_max * upv, 0xFFFF0000);
-        //}
-
-        /* Draw the grid slice */
+        /* DEBUG: draw the grid slice */
         if (debug) {
             float3 min_p, max_p;
             min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
             max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
 
+            /* Draw floating point grid slice */
             db::draw_aabb(min_p * upv, max_p * upv, 0xFF0000FF);
 
             min_p[k] = k_t, min_p[u] = x_min, min_p[v] = y_min;
-            max_p[k] = k_t + sign, max_p[u] = x_max, max_p[v] = y_max;
+            max_p[k] = k_t + sign, max_p[u] = x_max + 1, max_p[v] = y_max + 1;
 
-            db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF0000);
+            /* Draw grid slice */
+            db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
         }
 
         /* Iterate over cells in slice */
-        for (i32 y = y_min; y < y_max; y++) {
-            for (i32 x = x_min; x < x_max; x++) {
+        for (i32 y = y_min; y <= y_max; y++) {
+            for (i32 x = x_min; x <= x_max; x++) {
                 uint3 i; /* Cell coordinate */
                 i[k] = k_t, i[u] = x, i[v] = y;
 
+                // TODO: maybe avoid these checks? using clamp?
+                /* Safety check */
                 if (x < 0 || y < 0) continue;
                 if (x >= grid_size[u] || y >= grid_size[v]) continue;
-
-                /* DEBUG DRAW */
-                //if (debug) {
-                //    float3 c_pos, d_pos;
-                //    c_pos[k] = k_t, c_pos[u] = x, c_pos[v] = y;
-                //    d_pos[k] = k_t + sign, d_pos[u] = x + 1, d_pos[v] = y + 1;
-                //    db::draw_aabb(c_pos * upv, d_pos * upv, 0xFF00FF00);
-                //}
 
                 /* If the cell is a solid voxel */
                 if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
