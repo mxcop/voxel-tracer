@@ -134,19 +134,19 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
         /* Move to the next slice */
         slice = _mm_add_ps(slice, delta_slice);
 
+        /* Skip any slice 100% outside the grid */
+        if (u_max < 0.0f || v_max < 0.0f) continue;
+        if (u_min >= grid_size[u] || v_min >= grid_size[v]) continue;
+
         /* Truncate the floating point slice */
         const f128 fslice = _mm_floor_ps(slice);
         const i128 islice = _mm_cvttps_epi32(fslice);
 
-        /* Clamp the slice inside the grid extend */
+        /* Grid slice extend */
         const i32 y_min = islice.m128i_i32[2];
         const i32 y_max = islice.m128i_i32[3];
         const i32 x_min = islice.m128i_i32[0];
         const i32 x_max = islice.m128i_i32[1];
-
-        /* Skip any slice 100% outside the grid */
-        if (x_max < 0 || y_max < 0) continue;
-        if (x_min > grid_size[u] || y_min > grid_size[v]) continue;
 
         /* DEBUG: draw the grid slice */
         if (debug) {
@@ -171,7 +171,7 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
                 i[k] = k_t, i[u] = x, i[v] = y;
 
                 // TODO: maybe avoid these checks? using clamp?
-                /* Safety check */
+                /* Safety bounds check */
                 if (x < 0 || y < 0) continue;
                 if (x >= grid_size[u] || y >= grid_size[v]) continue;
 
@@ -196,31 +196,57 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
                         // TODO: maybe don't do this transform every time?
                         const float3 rd = TransformVector(packet.rays[r], bb.imodel);
                         const float3 grid_o = origin * vpu;
-                        const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t) + 0.01f;
-                        const f32 exit_t = entry(grid_o[k], rd[k], k_t + sign, k_t + sign) - 0.01f;
+                        const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t);
+                        const f32 exit_t = entry(grid_o[k], rd[k], k_t + sign, k_t + sign);
 
                         /* Ray entry and exit point in the grid slice */
                         const int3 entry_p = floori(grid_o + rd * entry_t);
                         const int3 exit_p = floori(grid_o + rd * exit_t);
 
                         /* DEBUG DRAW */
-                        //if (debug) {
-                        //    db::draw_aabb(float3(entry_p) * upv, float3(entry_p + 1) * upv, 0xFF00FF00);
-                        //}
+                        if (debug) {
+                            db::draw_line((grid_o + rd * entry_t) * upv,
+                                          (grid_o + rd * exit_t) * upv,
+                                          0xFFFF00FF);
+                            db::draw_aabb(float3(entry_p) * upv, float3(entry_p + 1) * upv,
+                                          0xFFFFFF00);
+                            db::draw_aabb(float3(exit_p) * upv, float3(exit_p + 1) * upv,
+                                          0xFFFFFF00);
+                        }
 
-                        /* If the ray (entry) intersects this voxel */
-                        if (x == entry_p[u] || y == entry_p[v]) {
+                        /* THIS METHOD IS ALSO NOT CORRECT!!! */
+                        const i32 pu_min = fminf(entry_p[u], exit_p[u]);
+                        const i32 pu_max = fmaxf(entry_p[u], exit_p[u]);
+                        const i32 pv_min = fminf(entry_p[v], exit_p[v]);
+                        const i32 pv_max = fmaxf(entry_p[v], exit_p[v]);
+
+                        if (x >= pu_min && x <= pu_max) {
                             hit.depth[r] = entry_t;
-                            // TODO: store normal (which in this case is major axis K)
+                            inactive_rays++;
+                            continue;
+                        }
+                        if (y >= pv_min && y <= pv_max) {
+                            hit.depth[r] = entry_t;
+                            inactive_rays++;
                             continue;
                         }
 
-                        /* If the ray (exit) intersects this voxel */
-                        if (x == exit_p[u] || y == exit_p[v]) {
-                            /* TEMP: is incorrect! */
-                            hit.depth[r] = entry_t;
-                            // TODO: store normal (diff between entry and exit point)
-                        }
+                        ///* If the ray (entry) intersects this voxel */
+                        //if (x == entry_p[u] && y == entry_p[v]) {
+                        //    hit.depth[r] = entry_t;
+                        //    inactive_rays++;
+                        //    // TODO: store normal (which in this case is major axis K)
+                        //    continue;
+                        //}
+
+                        ///* If the ray (exit) intersects this voxel */
+                        //if (x == exit_p[u] && y == exit_p[v]) {
+                        //    /* TEMP: is incorrect! */
+                        //    hit.depth[r] = entry_t;
+                        //    inactive_rays++;
+                        //    // TODO: store normal (diff between entry and exit point)
+                        //    continue;
+                        //}
                     }
 
                     /* Early exit if all rays are done */
