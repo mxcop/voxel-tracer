@@ -94,7 +94,7 @@ void Renderer::tick(f32 dt) {
 #ifndef PROFILING
 #pragma omp parallel for schedule(dynamic)
 #endif
-    
+
 #if 0
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
@@ -127,26 +127,19 @@ void Renderer::tick(f32 dt) {
 #else
     for (i32 y = 0; y < WIN_HEIGHT; y += 4) {
         for (i32 x = 0; x < WIN_WIDTH; x += 4) {
-            CoherentPacket4x4 packet;
-            packet.origin = camera.pos;
-            for (u32 v = 0; v < 4; v++) {
-                for (u32 u = 0; u < 4; u++) {
-                    packet.rays[v * 4 + u] =
-                        camera.get_primary_ray(x + u, y + v).dir;
-                }
-            }
-
+            const CoherentPacket4x4 packet = camera.get_coherent_packet(x, y);
             const CoherentHit4x4 hits = scene.cvv->intersect(packet);
 
             for (u32 v = 0; v < 4; v++) {
                 for (u32 u = 0; u < 4; u++) {
-                    //const float4 c = 0.2f + hits.depth[v * 4 + u] * 0.005f;
-                    //screen->pixels[(x + u) + (y + v) * WIN_WIDTH] = RGBF32_to_RGB8(&c);
-                    const float4 normal = hits.normal[v * 4 + u];
-                    const float4 c = (normal + 1.0f) * 0.5f;
+                    const i32 id = v * 4 + u;
+                    const i32 sid = (x + u) + (y + v) * WIN_WIDTH;
 
-                    screen->pixels[(x + u) + (y + v) * WIN_WIDTH] =
-                        RGBF32_to_RGB8(&c);
+                    // const float4 normal = hits.normal[id];
+                    // const float4 c = (normal + 1.0f) * 0.5f;
+                    const float4 c = hits.depth[id];
+
+                    screen->pixels[sid] = RGBF32_to_RGB8(&c);
                 }
             }
         }
@@ -239,10 +232,11 @@ void Renderer::MouseDown(int button) {
         const Ray ray = camera.get_primary_ray(mousePos.x, mousePos.y);
         dev::debug_ray = ray;
         dev::debug_ray.debug = true;
-        
+
         for (u32 v = 0; v < 4; v++) {
             for (u32 u = 0; u < 4; u++) {
-                dev::debug_packet.rays[v * 4 + u] = camera.get_primary_ray(mousePos.x + u, mousePos.y + v).dir;
+                dev::debug_packet.rays[v * 4 + u] =
+                    camera.get_primary_ray(mousePos.x + u, mousePos.y + v).dir;
                 dev::debug_packet.origin = camera.pos;
             }
         }

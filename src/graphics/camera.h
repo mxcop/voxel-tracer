@@ -30,6 +30,39 @@ struct Camera {
         return Ray(pos, normalize(ray_end - pos));
     }
 
+    /* Get a new coherent primary ray packet from an X and Y pixel coordinate. */
+    inline CoherentPacket4x4 get_coherent_packet(const f32 x, const f32 y) const {
+        CoherentPacket4x4 packet;
+        packet.origin = pos;
+
+        const f128 win_w = _mm_set_ps1(1.0f / WIN_WIDTH);
+        const f128 win_h = _mm_set_ps1(1.0f / WIN_HEIGHT);
+        for (u32 v = 0; v < 4; v += 2) {
+            for (u32 u = 0; u < 4; u += 2) {
+                const u32 ix = x + u, iy = y + v;
+
+                /* UV coordinates */
+                const f128 xm = _mm_setr_ps(ix, ix + 1, ix, ix + 1);
+                const f128 ym = _mm_setr_ps(iy, iy, iy + 1, iy + 1);
+                const f128 um = _mm_mul_ps(xm, win_w), vm = _mm_mul_ps(ym, win_h);
+
+                QuadBundle bundle = {};
+                bundle.v1 = (tl + um.m128_f32[0] * (tr - tl) + vm.m128_f32[0] * (bl - tl)) - pos;
+                bundle.v2 = (tl + um.m128_f32[1] * (tr - tl) + vm.m128_f32[1] * (bl - tl)) - pos;
+                bundle.v3 = (tl + um.m128_f32[2] * (tr - tl) + vm.m128_f32[2] * (bl - tl)) - pos;
+                bundle.v4 = (tl + um.m128_f32[3] * (tr - tl) + vm.m128_f32[3] * (bl - tl)) - pos;
+                normalize_bundle(bundle); /* Fast SIMD normalize */
+
+                packet.rays[v * 4 + u] = bundle.v1;
+                packet.rays[v * 4 + (u + 1)] = bundle.v2;
+                packet.rays[(v + 1) * 4 + u] = bundle.v3;
+                packet.rays[(v + 1) * 4 + (u + 1)] = bundle.v4;
+            }
+        }
+
+        return packet;
+    }
+
     /* Bundle of 4 x 3D vectors. */
     union QuadBundle {
         struct {
