@@ -140,8 +140,13 @@ void Renderer::tick(f32 dt) {
 
             for (u32 v = 0; v < 4; v++) {
                 for (u32 u = 0; u < 4; u++) {
-                    const float4 c = hits.depth[v * 4 + u] * 0.005f;
-                    screen->pixels[(x + u) + (y + v) * WIN_WIDTH] = RGBF32_to_RGB8(&c);
+                    //const float4 c = 0.2f + hits.depth[v * 4 + u] * 0.005f;
+                    //screen->pixels[(x + u) + (y + v) * WIN_WIDTH] = RGBF32_to_RGB8(&c);
+                    const float4 normal = hits.normal[v * 4 + u];
+                    const float4 c = (normal + 1.0f) * 0.5f;
+
+                    screen->pixels[(x + u) + (y + v) * WIN_WIDTH] =
+                        RGBF32_to_RGB8(&c);
                 }
             }
         }

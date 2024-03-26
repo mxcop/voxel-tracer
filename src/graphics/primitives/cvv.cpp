@@ -143,10 +143,10 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
         const i128 islice = _mm_cvttps_epi32(fslice);
 
         /* Grid slice extend */
-        const i32 y_min = islice.m128i_i32[2];
-        const i32 y_max = islice.m128i_i32[3];
-        const i32 x_min = islice.m128i_i32[0];
-        const i32 x_max = islice.m128i_i32[1];
+        const i32 y_min = max(0, islice.m128i_i32[2]);
+        const i32 y_max = min(grid_size[v] - 1, islice.m128i_i32[3]);
+        const i32 x_min = max(0, islice.m128i_i32[0]);
+        const i32 x_max = min(grid_size[u] - 1, islice.m128i_i32[1]);
 
         /* DEBUG: draw the grid slice */
         if (debug) {
@@ -164,97 +164,104 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
             db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
         }
 
+        const int3 step = make_int3(-getsign(ray_tl.x), -getsign(ray_tl.y), -getsign(ray_tl.z));
+
         /* Iterate over cells in slice */
+        u32 inactive_rays = 0;
         for (i32 y = y_min; y <= y_max; y++) {
             for (i32 x = x_min; x <= x_max; x++) {
-                uint3 i; /* Cell coordinate */
+                int3 i; /* Cell coordinate */
                 i[k] = k_t, i[u] = x, i[v] = y;
 
                 // TODO: maybe avoid these checks? using clamp?
                 /* Safety bounds check */
-                if (x < 0 || y < 0) continue;
-                if (x >= grid_size[u] || y >= grid_size[v]) continue;
+                // if (x < 0 || y < 0) continue;
+                // if (x >= grid_size[u] || y >= grid_size[v]) continue;
 
                 /* If the cell is a solid voxel */
                 if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
-                    // TESTING
-                    // for (u32 r = 0; r < 4 * 4; r++) {
-                    //    hit.depth[r] = k_t;
-                    //}
-                    // return hit;
-                    // TESTING
-
                     /* Find which rays intersect this voxel */
-                    u32 inactive_rays = 0;
+                    inactive_rays = 0;
                     for (u32 r = 0; r < 4 * 4; r++) {
                         /* Only check active rays */
                         if (hit.depth[r] != BIG_F32) {
                             inactive_rays++;
-                            continue;
+                            // continue;
                         }
 
                         // TODO: maybe don't do this transform every time?
                         const float3 rd = TransformVector(packet.rays[r], bb.imodel);
+                        const float3 ird = 1.0f / rd;
                         const float3 grid_o = origin * vpu;
+                        
+                        /* Entry point */
                         const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t);
-                        const f32 exit_t = entry(grid_o[k], rd[k], k_t + sign, k_t + sign);
+                        const float3 entry_p = grid_o + rd * entry_t;
+                        int3 entry_c = floori(entry_p);
+                        entry_c[k] = k_t;
 
-                        /* Ray entry and exit point in the grid slice */
-                        const int3 entry_p = floori(grid_o + rd * entry_t);
-                        const int3 exit_p = floori(grid_o + rd * exit_t);
+                        /* DDA */
+                        const float3 delta = fabs(ird);
+                        float3 tmax = ((float3(entry_c) - entry_p) + fmaxf(step, 0)) * ird;
+                        u32 axis = k;
+                        f32 inner_t = 0;
 
-                        /* DEBUG DRAW */
-                        if (debug) {
-                            db::draw_line((grid_o + rd * entry_t) * upv,
-                                          (grid_o + rd * exit_t) * upv,
-                                          0xFFFF00FF);
-                            db::draw_aabb(float3(entry_p) * upv, float3(entry_p + 1) * upv,
-                                          0xFFFFFF00);
-                            db::draw_aabb(float3(exit_p) * upv, float3(exit_p + 1) * upv,
-                                          0xFFFFFF00);
+                        for (u32 q = 0; q < 5; q++) {
+                            /* DEBUG DRAW */
+                            //if (debug) {
+                            //    db::draw_aabb(float3(entry_c) * upv, float3(entry_c + 1) * upv,
+                            //                  0xFFFFFF00);
+                            //}
+
+                            /* Stop if depth is higher or equal to previously found depth */
+                            if (hit.depth[r] <= entry_t + inner_t * upv) break;
+
+                            /* Hit! */
+                            if (entry_c[u] == i[u] && entry_c[v] == i[v]) {
+                                inactive_rays++;
+                                hit.depth[r] = entry_t + inner_t * upv;
+                                /* Normal */
+                                hit.normal[r] = 0, hit.normal[r][axis] = -step[axis];
+                                break;
+                            }
+
+                            /* Amanatides & Woo */
+                            /* <http://www.cse.yorku.ca/~amana/research/grid.pdf> */
+                            if (tmax[u] < tmax[v]) {
+                                if (tmax[u] < tmax[k]) {
+                                    entry_c[u] += step[u];
+                                    axis = u;
+                                    inner_t = tmax[u];
+                                    tmax[u] += delta[u];
+                                } else {
+                                    break;
+                                }
+                            } else {
+                                if (tmax[v] < tmax[k]) {
+                                    entry_c[v] += step[v];
+                                    axis = v;
+                                    inner_t = tmax[v];
+                                    tmax[v] += delta[v];
+                                } else {
+                                    break;
+                                }
+                            }
                         }
-
-                        /* THIS METHOD IS ALSO NOT CORRECT!!! */
-                        const i32 pu_min = fminf(entry_p[u], exit_p[u]);
-                        const i32 pu_max = fmaxf(entry_p[u], exit_p[u]);
-                        const i32 pv_min = fminf(entry_p[v], exit_p[v]);
-                        const i32 pv_max = fmaxf(entry_p[v], exit_p[v]);
-
-                        if (x >= pu_min && x <= pu_max) {
-                            hit.depth[r] = entry_t;
-                            inactive_rays++;
-                            continue;
-                        }
-                        if (y >= pv_min && y <= pv_max) {
-                            hit.depth[r] = entry_t;
-                            inactive_rays++;
-                            continue;
-                        }
-
-                        ///* If the ray (entry) intersects this voxel */
-                        //if (x == entry_p[u] && y == entry_p[v]) {
-                        //    hit.depth[r] = entry_t;
-                        //    inactive_rays++;
-                        //    // TODO: store normal (which in this case is major axis K)
-                        //    continue;
-                        //}
-
-                        ///* If the ray (exit) intersects this voxel */
-                        //if (x == exit_p[u] && y == exit_p[v]) {
-                        //    /* TEMP: is incorrect! */
-                        //    hit.depth[r] = entry_t;
-                        //    inactive_rays++;
-                        //    // TODO: store normal (diff between entry and exit point)
-                        //    continue;
-                        //}
-                    }
-
-                    /* Early exit if all rays are done */
-                    if (inactive_rays == (4 * 4)) {
-                        return hit;
                     }
                 }
             }
+        }
+
+        /* Early exit if all rays are done */
+        if (inactive_rays == (4 * 4)) {
+            return hit;
+        }
+    }
+
+    /* Finalize the normals */
+    for (u32 r = 0; r < 4 * 4; r++) {
+        if (hit.depth[r] != BIG_F32) {
+            hit.normal[r] = normalize(TransformVector(hit.normal[r], bb.model));
         }
     }
 

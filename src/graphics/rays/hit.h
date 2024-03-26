@@ -20,6 +20,7 @@ struct PacketHitInfo {
 
 struct alignas(64) CoherentHit4x4 {
     f32 depth[4 * 4] = {};
+    float3 normal[4 * 4] = {};
 
     CoherentHit4x4() {
         for (u32 r = 0; r < 4*4; r++) {
