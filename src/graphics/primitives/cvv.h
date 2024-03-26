@@ -40,6 +40,7 @@ class CoherentVoxelVolume {
 
     /* Trace-able functions */
     CoherentHit4x4 intersect(const CoherentPacket4x4& packet, const bool debug = false) const;
+    CoherentHit8x8 intersect(const CoherentPacket8x8& packet, const bool debug = false) const;
 
     inline void set_pivot(const float3 pivot) { bb.pivot = pivot, this->pivot = pivot; };
     inline void set_rotation(const quat& rot) { bb.set_rotation_pivot(pivot, rot); };

@@ -125,19 +125,19 @@ void Renderer::tick(f32 dt) {
         }
     }
 #else
-    for (i32 y = 0; y < WIN_HEIGHT; y += 4) {
-        for (i32 x = 0; x < WIN_WIDTH; x += 4) {
-            const CoherentPacket4x4 packet = camera.get_coherent_packet(x, y);
-            const CoherentHit4x4 hits = scene.cvv->intersect(packet);
+    for (i32 y = 0; y < WIN_HEIGHT; y += 8) {
+        for (i32 x = 0; x < WIN_WIDTH; x += 8) {
+            const CoherentPacket8x8 packet = camera.get_coherent_packet8(x, y);
+            const CoherentHit8x8 hits = scene.cvv->intersect(packet);
 
-            for (u32 v = 0; v < 4; v++) {
-                for (u32 u = 0; u < 4; u++) {
-                    const i32 id = v * 4 + u;
+            for (u32 v = 0; v < 8; v++) {
+                for (u32 u = 0; u < 8; u++) {
+                    const i32 id = v * 8 + u;
                     const i32 sid = (x + u) + (y + v) * WIN_WIDTH;
 
-                    // const float4 normal = hits.normal[id];
-                    // const float4 c = (normal + 1.0f) * 0.5f;
-                    const float4 c = hits.depth[id];
+                    const float4 normal = hits.normal[id];
+                    const float4 c = (normal + 1.0f) * 0.5f;
+                    // const float4 c = hits.depth[id];
 
                     screen->pixels[sid] = RGBF32_to_RGB8(&c);
                 }
@@ -208,7 +208,7 @@ void Renderer::gui(f32 dt) {
     // TODO: remove this
     trace(dev::debug_ray, 0, 0, true);
     db::draw_aabb(0, 1, 0xFFFF0000);
-    dev::debug_packet.setup_slice(0, 1, 32);
+    // dev::debug_packet.setup_slice(0, 1, 32);
     scene.cvv->intersect(dev::debug_packet, true);
     // dev::debug_packet.traverse(0, 1, 32);
 }
@@ -233,13 +233,14 @@ void Renderer::MouseDown(int button) {
         dev::debug_ray = ray;
         dev::debug_ray.debug = true;
 
-        for (u32 v = 0; v < 4; v++) {
-            for (u32 u = 0; u < 4; u++) {
-                dev::debug_packet.rays[v * 4 + u] =
-                    camera.get_primary_ray(mousePos.x + u, mousePos.y + v).dir;
-                dev::debug_packet.origin = camera.pos;
-            }
-        }
+        dev::debug_packet = camera.get_coherent_packet8(mousePos.x, mousePos.y);
+        //for (u32 v = 0; v < 4; v++) {
+        //    for (u32 u = 0; u < 4; u++) {
+        //        dev::debug_packet.rays[v * 4 + u] =
+        //            camera.get_primary_ray(mousePos.x + u, mousePos.y + v).dir;
+        //        dev::debug_packet.origin = camera.pos;
+        //    }
+        //}
     }
 }
 

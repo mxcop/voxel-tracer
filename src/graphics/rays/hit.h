@@ -28,3 +28,14 @@ struct alignas(64) CoherentHit4x4 {
         }
     }
 };
+
+struct alignas(64) CoherentHit8x8 {
+    f32 depth[8 * 8] = {};
+    float3 normal[8 * 8] = {};
+
+    CoherentHit8x8() {
+        for (u32 r = 0; r < 8 * 8; r++) {
+            depth[r] = BIG_F32;
+        }
+    }
+};

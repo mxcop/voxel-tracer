@@ -5,7 +5,7 @@ class Camera;
 struct TraceResult;
 struct HitInfo;
 struct Ray;
-struct CoherentPacket4x4;
+struct CoherentPacket8x8;
 
 namespace Tmpl8 {
 class Surface;
@@ -27,7 +27,7 @@ extern Camera* main_camera;
 extern Tmpl8::Surface* db_screen;
 
 extern Ray debug_ray;
-extern CoherentPacket4x4 debug_packet;
+extern CoherentPacket8x8 debug_packet;
 
 extern f32 frame_time;
 

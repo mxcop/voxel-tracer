@@ -40,6 +40,14 @@ struct alignas(64) CoherentPacket4x4 {
     f32 entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const;
 };
 
+/* Coherent ray packet 8x8, cache line aligned. */
+struct alignas(64) CoherentPacket8x8 {
+    /* Packet origin point. */
+    float3 origin;
+    /* Packet ray directions. */
+    float3 rays[8 * 8];
+};
+
 /* SIMD (SSE) Ray packet structure. */
 struct alignas(64) RayPacket128 {
     union {
