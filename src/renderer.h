@@ -51,7 +51,9 @@ class Renderer : public TheApp {
     /* User input */
     void MouseUp(int button) {}
     void MouseDown(int button);
-    void MouseMove(int x, int y) { mousePos.x = x, mousePos.y = y; }
+    void MouseMove(int x, int y) {
+        mouse_pos.x = x, mouse_pos.y = y; 
+    }
     void MouseWheel(float y) {}
     void KeyUp(int key) {}
     void KeyDown(int key) {}
@@ -68,7 +70,10 @@ class Renderer : public TheApp {
      */
     inline float4 insert_accu_raw(const u32 x, const u32 y, const Ray& ray, const float4& c) const;
 
-    int2 mousePos;
+    bool escaped = false;
+
+    int2 mouse_pos;
+    int2 mouse_old;
     u32 frame = 0u;
 
     /* Game camera */

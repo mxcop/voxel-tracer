@@ -50,3 +50,17 @@ f32 Camera::update(const f32 t) {
     }
     return 0;
 }
+
+void Camera::look(const int2& mouse_delta, const f32 dt) {
+    if (not WindowHasFocus()) return;
+    const f32 speed = 0.025f * dt;
+
+    /* Determine the camera directions */
+    float3 ahead = normalize(target - pos);
+    float3 right = normalize(cross(UP, ahead));
+    float3 up = normalize(cross(ahead, right));
+
+    /* Look around */
+    target += speed * right * (f32)mouse_delta.x;
+    target -= speed * up * (f32)mouse_delta.y;
+}

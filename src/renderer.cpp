@@ -44,6 +44,9 @@ void Renderer::init() {
 
     /* Load the blue noise sampler */
     bnoise = new BlueNoise();
+
+    DisableCursor();
+    mouse_old = mouse_pos;
 }
 
 float3 debug_point = {0.42f, 0.22f, 2.75f};
@@ -518,6 +521,13 @@ void Renderer::tick(f32 dt) {
     dev::frame_time = t.elapsed();
 #endif
 
+    /* Camera movement */
+    if (not escaped) {
+        const int2 delta = mouse_pos - mouse_old;
+        mouse_old = mouse_pos;
+        camera.look(delta, dt);
+    }
+
     /* Update the camera */
     depth_delta = camera.update(dt);
 }
@@ -553,6 +563,21 @@ void Renderer::gui(f32 dt) {
     }
 #endif
 
+    /* Escape logic */
+    static bool escape_down = false;
+    if (IsKeyDown(GLFW_KEY_ESCAPE) && !escape_down) {
+        if (escaped) {
+            running = false;
+        } else {
+            escaped = true;
+            EnableCursor();
+        }
+        escape_down = true;
+    }
+    if (!IsKeyDown(GLFW_KEY_ESCAPE) && escape_down) {
+        escape_down = false;
+    }
+
     // TODO: remove this
     trace(dev::debug_ray, 0, 0, true);
 }
@@ -572,8 +597,15 @@ void Renderer::MouseDown(int button) {
     if (ImGui::GetIO().WantCaptureMouse) return;
 #endif
 
+    /* Escape logic */
+    if (escaped) {
+        mouse_old = mouse_pos, escaped = false;
+        DisableCursor();
+        return;
+    }
+
     if (button == 0) {
-        const Ray ray = camera.get_primary_ray(mousePos.x, mousePos.y);
+        const Ray ray = camera.get_primary_ray(mouse_pos.x, mouse_pos.y);
         dev::debug_ray = ray;
         dev::debug_ray.debug = true;
         //debug_point = ray.origin + ray.dir * scene.intersect(ray).depth;

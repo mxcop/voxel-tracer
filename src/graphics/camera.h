@@ -101,6 +101,9 @@ struct Camera {
     /* Update the camera and handle inputs. (returns forward motion delta) */
     f32 update(const f32 t);
 
+    /** @brief Look around with a mouse delta. */
+    void look(const int2& mouse_delta, const f32 dt);
+
    private:
     f32 focal_point = 0.01f;
 };
