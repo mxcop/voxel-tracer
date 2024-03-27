@@ -148,6 +148,7 @@
     <ClInclude Include="src\graphics\lighting\materials.h" />
     <ClInclude Include="src\graphics\scene.h" />
     <ClInclude Include="src\graphics\noise\sampler.h" />
+    <ClInclude Include="src\engine\physics\collision\sat.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

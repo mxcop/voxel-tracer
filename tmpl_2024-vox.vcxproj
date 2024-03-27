@@ -231,6 +231,7 @@
     <ClInclude Include="src\engine\physics\collision\colliders.h" />
     <ClInclude Include="src\engine\physics\collision\collision.h" />
     <ClInclude Include="src\engine\physics\collision\gjk.h" />
+    <ClInclude Include="src\engine\physics\collision\sat.h" />
     <ClInclude Include="src\engine\physics\collision\simplex.h" />
     <ClInclude Include="src\engine\physics\object.h" />
     <ClInclude Include="src\engine\physics\transform.h" />
