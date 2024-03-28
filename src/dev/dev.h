@@ -2,6 +2,7 @@
 
 class Renderer;
 class Camera;
+class Pyramid;
 struct TraceResult;
 struct HitInfo;
 struct Ray;
@@ -26,6 +27,7 @@ extern Camera* main_camera;
 extern Tmpl8::Surface* db_screen;
 
 extern Ray debug_ray;
+extern Pyramid debug_py;
 
 extern f32 frame_time;
 

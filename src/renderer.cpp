@@ -8,6 +8,7 @@
 #include "dev/gui.h"
 #include "dev/debug.h"
 #include "dev/profile.h"
+#include <engine/physics/collision/sat.h>
 
 void Renderer::init() {
     /* Try load the camera settings */
@@ -497,6 +498,34 @@ void Renderer::tick(f32 dt) {
         }
     }
 
+    /* TESTING */
+    db::draw_aabb(0, 1, 0xFFFF0000);
+    box_t test_box;
+    test_box.min = 0, test_box.max = 1;
+    for (i32 y = 0; y < WIN_HEIGHT; y += 16) {
+        for (i32 x = 0; x < WIN_WIDTH; x += 16) {
+            const Ray ray_tl = camera.get_primary_ray(x, y);
+            const Ray ray_tr = camera.get_primary_ray(x + 16, y);
+            const Ray ray_bl = camera.get_primary_ray(x, y + 16);
+            const Pyramid py = Pyramid(camera.pos, normalize(camera.target - camera.pos), ray_tl.dir,
+                                       ray_tr.dir, ray_bl.dir);
+
+            if (box_pyramid_sat(test_box, py)) {
+                for (i32 v = 0; v < 16; v++) {
+                    for (i32 u = 0; u < 16; u++) {
+                        screen->pixels[(x + u) + (y + v) * WIN_WIDTH] |= 0x0000FF00;
+                    }
+                }
+            }
+        }
+    }
+
+    dev::debug_py.db_draw();
+    box_pyramid_sat(test_box, dev::debug_py, true);
+    //if (box_pyramid_sat(test_box, dev::debug_py)) {
+    //    
+    //}
+
 #if DENOISE
     /* Blur */
     memcpy(blur_in, accu, WIN_WIDTH * WIN_HEIGHT * sizeof(float4));
@@ -510,6 +539,15 @@ void Renderer::tick(f32 dt) {
         }
     }
 #endif
+
+    /* TESTING */
+    //box_t test_box;
+    //test_box.min = 0, test_box.max = 1;
+    //if (box_pyramid_sat(test_box, camera.pyramid))
+    //    db::draw_aabb(0, 1, 0xFF00FF00);
+    //else
+    //    db::draw_aabb(0, 1, 0xFFFF0000);
+
 
     /* Swap the accumulator and the previous frame pointers */
     /* Faster than copying everything from the accu to the prev */
@@ -599,17 +637,22 @@ void Renderer::MouseDown(int button) {
 
     /* Escape logic */
     if (escaped) {
+        if (button == 0) {
+            const Ray ray = camera.get_primary_ray(mouse_pos.x, mouse_pos.y);
+            dev::debug_ray = ray;
+            dev::debug_ray.debug = true;
+
+            const int2 mp = floori(float2(mouse_pos) / 16.0f) * 16;
+            const Ray ray_tl = camera.get_primary_ray(mp.x, mp.y);
+            const Ray ray_tr = camera.get_primary_ray(mp.x + 16, mp.y);
+            const Ray ray_bl = camera.get_primary_ray(mp.x, mp.y + 16);
+            dev::debug_py = Pyramid(camera.pos, normalize(camera.target - camera.pos), ray_tl.dir,
+                                    ray_tr.dir, ray_bl.dir);
+        }
+
         mouse_old = mouse_pos, escaped = false;
         DisableCursor();
         return;
-    }
-
-    if (button == 0) {
-        const Ray ray = camera.get_primary_ray(mouse_pos.x, mouse_pos.y);
-        dev::debug_ray = ray;
-        dev::debug_ray.debug = true;
-        //debug_point = ray.origin + ray.dir * scene.intersect(ray).depth;
-        //debug_origin = ray.origin;
     }
 }
 

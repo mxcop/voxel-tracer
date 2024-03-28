@@ -9,10 +9,13 @@ class Pyramid {
         float4 normal;
     };
 
+    float3 origin = {};
+    float3 far_corners[4] = {};
+
+   public:
     Plane planes[4] = {};
     float4 forward = {};
 
-   public:
     Pyramid() = default;
     /**
      * @brief Create a pyramid from an origin and 3 corner rays.
@@ -24,6 +27,9 @@ class Pyramid {
      * @param bl Frustum direction bottom left.
      */
     Pyramid(const float3& o, const float3 f, const float3 tl, const float3 tr, const float3 bl);
+
+    // FOR DEBUGGING ONLY
+    void db_draw() const;
 
     /**
      * @brief Project a world point onto the pyramid view.
@@ -40,4 +46,6 @@ class Pyramid {
      * @return UV coordinates of the point. (outside view if not between 0 and 1)
      */
     float2 safe_project(const float3& point) const;
+
+    void projected_minmax(const float3& n, f32& min, f32& max) const;
 };
