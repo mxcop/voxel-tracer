@@ -144,8 +144,9 @@ inline bool separation(const corners& corners_a, const Pyramid& pyramid, const f
 
     if (debug) {
         const float3 center = corners_a[0] + (corners_a[7] - corners_a[0]) * 0.5f;
-        // db::draw_line(center + a_min * n, center + a_max * n, 0xFF0000FF);
-        db::draw_line(center + b_min * n, center + b_max * n, 0xFFFFFF00);
+        //const float3 center = {5,0,5};
+        db::draw_line(a_min * n, a_max * n, 0xFFFF0000);
+        db::draw_line(b_min * n, b_max * n, 0xFF0000FF);
     }
 
     /* Check for separation */
@@ -168,7 +169,7 @@ bool box_pyramid_sat(const box_t& box, const Pyramid& pyramid, bool debug = fals
         /* Get a rotated normal */
         const float3 normal = rot_a[n];
 
-        if (debug) db::draw_normal(box.min + (box.max - box.min) * 0.5f, normal, 0xFF0000FF);
+        if (debug) db::draw_normal(box.min + (box.max - box.min) * 0.5f, normal, 0xFFFF0000);
 
         /* Check for separation */
         if (separation(corners_a, pyramid, normal)) {
@@ -176,7 +177,7 @@ bool box_pyramid_sat(const box_t& box, const Pyramid& pyramid, bool debug = fals
         }
     }
 
-    /* Check pyramid normals (3 axes) */
+    /* Check pyramid normals (5 axes) */
     if (separation(corners_a, pyramid, pyramid.forward)) {
         return false; /* Separating plane found! */
     }
@@ -193,27 +194,45 @@ bool box_pyramid_sat(const box_t& box, const Pyramid& pyramid, bool debug = fals
         }
     }
 
-    /* Check cross products (6 axes) */
+    //if (separation(corners_a, pyramid, (pyramid.planes[0].normal + pyramid.planes[2].normal) * 0.5f,
+    //               debug)) {
+    //    return false; /* Separating plane found! */
+    //}
+    //if (separation(corners_a, pyramid, (pyramid.planes[1].normal + pyramid.planes[2].normal) * 0.5f,
+    //               debug)) {
+    //    return false; /* Separating plane found! */
+    //}
+    //if (separation(corners_a, pyramid, (pyramid.planes[0].normal + pyramid.planes[3].normal) * 0.5f,
+    //               debug)) {
+    //    return false; /* Separating plane found! */
+    //}
+    //if (separation(corners_a, pyramid, (pyramid.planes[1].normal + pyramid.planes[3].normal) * 0.5f,
+    //               debug)) {
+    //    return false; /* Separating plane found! */
+    //}
+
+    /* Check cross products (12 axes) */
     for (u32 an = 0; an < 3; ++an) {
         /* Get a rotated normal */
         const float3 normal_a = rot_a[an];
 
-        if (debug)
-            db::draw_normal(box.min + (box.max - box.min) * 0.5f,
-                            normalize(cross(pyramid.forward, normal_a)), 0xFFFF0000);
+        /* Forward normal axis */
+        //const float3 f_normal = normalize(cross(pyramid.forward, normal_a));
 
-        if (separation(corners_a, pyramid, normalize(cross(pyramid.forward, normal_a)), debug)) {
-            return false; /* Separating plane found! */
-        }
+        //if (debug) db::draw_normal(box.min + (box.max - box.min) * 0.5f, f_normal, 0xFFFF00FF);
 
-        for (u32 bn = 0; bn < 4; ++bn) {
+        //if (separation(corners_a, pyramid, f_normal, debug)) {
+        //    return false; /* Separating plane found! */
+        //}
+
+        for (u32 bn = 0; bn < 6; ++bn) {
             /* Get a rotated normal */
-            const float3 normal_b = pyramid.planes[bn].normal;
+            const float3 normal_b = pyramid.rays[bn];
 
             /* Cross projection normal */
-            const float3 normal = normalize(cross(normal_a, normal_b));
+            const float3 normal = normalize(cross(normal_b, normal_a));
 
-            if (debug) db::draw_normal(box.min + (box.max - box.min) * 0.5f, normal, 0xFFFF0000);
+            if (debug) db::draw_normal(box.min + (box.max - box.min) * 0.5f, normal, 0xFFFF00FF);
 
             /* Check for separation */
             if (separation(corners_a, pyramid, normal)) {

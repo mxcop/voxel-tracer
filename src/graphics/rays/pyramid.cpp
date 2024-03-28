@@ -9,10 +9,10 @@ Pyramid::Pyramid(const float3& o, const float3 f, const float3 tl, const float3 
     origin = o;
 
     /* Corners */
-    far_corners[0] = o + tl * 10.0f;
-    far_corners[1] = o + tr * 10.0f;
-    far_corners[2] = o + bl * 10.0f;
-    far_corners[3] = o + br * 10.0f;
+    far_corners[0] = o + tl * 10.0f, rays[0] = tl;
+    far_corners[1] = o + tr * 10.0f, rays[1] = tr;
+    far_corners[2] = o + bl * 10.0f, rays[2] = bl;
+    far_corners[3] = o + br * 10.0f, rays[3] = br;
 
     /* Left pyramid plane */
     planes[0].normal = normalize(cross(bl, tl));
@@ -21,10 +21,12 @@ Pyramid::Pyramid(const float3& o, const float3 f, const float3 tl, const float3 
     /* Right pyramid plane */
     planes[1].normal = normalize(cross(tr, br));
     planes[1].normal.w = -dot(planes[1].normal, origin4);
+    rays[4] = planes[1].normal;
 
     /* Top pyramid plane */
     planes[2].normal = normalize(cross(tl, tr));
     planes[2].normal.w = -dot(planes[2].normal, origin4);
+    rays[5] = planes[2].normal;
 
     /* Bottom pyramid plane */
     planes[3].normal = normalize(cross(br, bl));

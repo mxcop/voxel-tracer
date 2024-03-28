@@ -16,6 +16,9 @@ class Pyramid {
     Plane planes[4] = {};
     float4 forward = {};
 
+    // TESTING
+    float3 rays[6] = {};
+
     Pyramid() = default;
     /**
      * @brief Create a pyramid from an origin and 3 corner rays.
