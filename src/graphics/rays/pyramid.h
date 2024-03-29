@@ -9,14 +9,16 @@ class Pyramid {
         float4 normal;
     };
 
+    /* Used for intersection testing */
     float3 origin = {};
     float3 far_corners[4] = {};
 
    public:
+    /* Used for projection */
     Plane planes[4] = {};
     float4 forward = {};
 
-    // TESTING
+    /* Used for intersection testing */
     float3 rays[6] = {};
 
     Pyramid() = default;
@@ -32,7 +34,7 @@ class Pyramid {
     Pyramid(const float3& o, const float3 f, const float3 tl, const float3 tr, const float3 bl);
 
     // FOR DEBUGGING ONLY
-    void db_draw() const;
+    // void db_draw() const;
 
     /**
      * @brief Project a world point onto the pyramid view.

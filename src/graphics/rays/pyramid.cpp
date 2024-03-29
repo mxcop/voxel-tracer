@@ -9,10 +9,10 @@ Pyramid::Pyramid(const float3& o, const float3 f, const float3 tl, const float3 
     origin = o;
 
     /* Corners */
-    far_corners[0] = o + tl * 10.0f, rays[0] = tl;
-    far_corners[1] = o + tr * 10.0f, rays[1] = tr;
-    far_corners[2] = o + bl * 10.0f, rays[2] = bl;
-    far_corners[3] = o + br * 10.0f, rays[3] = br;
+    far_corners[0] = o + tl * 100'000.0f, rays[0] = tl;
+    far_corners[1] = o + tr * 100'000.0f, rays[1] = tr;
+    far_corners[2] = o + bl * 100'000.0f, rays[2] = bl;
+    far_corners[3] = o + br * 100'000.0f, rays[3] = br;
 
     /* Left pyramid plane */
     planes[0].normal = normalize(cross(bl, tl));
@@ -37,14 +37,14 @@ Pyramid::Pyramid(const float3& o, const float3 f, const float3 tl, const float3 
     forward.w = -dot(forward, origin4);
 }
 
-void Pyramid::db_draw() const {
-    for (u32 i = 0; i < 4; i++) {
-        db::draw_line(origin, far_corners[i], 0xFF0000FF);
-    }
-    for (u32 i = 0; i < 4; i++) {
-        db::draw_normal(origin, planes[i].normal, 0xFFFF0000);
-    }
-}
+//void Pyramid::db_draw() const {
+//    for (u32 i = 0; i < 4; i++) {
+//        db::draw_line(origin, far_corners[i], 0xFF0000FF);
+//    }
+//    for (u32 i = 0; i < 4; i++) {
+//        db::draw_normal(origin, planes[i].normal, 0xFFFF0000);
+//    }
+//}
 
 float2 Pyramid::project(const float3& point) const {
     const float4 p = float4(point, 1);

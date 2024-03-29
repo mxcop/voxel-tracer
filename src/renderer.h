@@ -59,16 +59,11 @@ class Renderer : public TheApp {
     void KeyDown(int key) {}
 
     /**
-     * @brief Reproject onto the current frame and accumulate. (with tonemapping)
-     * @return The color to display on screen for this pixel.
-     */
-    inline float4 insert_accu(const u32 x, const u32 y, const Ray& ray, const float4& c) const;
-
-    /**
      * @brief Reproject onto the current frame and accumulate. (without tonemapping)
      * @return The color to display on screen for this pixel.
      */
-    inline float4 insert_accu_raw(const u32 x, const u32 y, const Ray& ray, const float4& c) const;
+    inline float3 insert_accu(const u32 x, const u32 y, const Ray& ray, const float3& c,
+                                  const f32 d) const;
 
     bool escaped = false;
 
