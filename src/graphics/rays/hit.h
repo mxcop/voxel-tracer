@@ -17,3 +17,7 @@ struct PacketHitInfo {
     f128 exit_t;
     u32 steps = 0; /* For debugging! */
 };
+
+struct alignas(64) PacketHit8x8 {
+    HitInfo hits[8 * 8];
+};

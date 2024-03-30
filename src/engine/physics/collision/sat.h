@@ -82,7 +82,7 @@ inline bool separation(const corners& corners_a, const corners& corners_b, const
 /**
  * @brief Find if two boxes are intersecting each other.
  */
-bool box_sat(const box_t& box_a, const box_t& box_b) {
+inline bool box_sat(const box_t& box_a, const box_t& box_b) {
     /* Look for a separation on all 15 axes */
     const corners corners_a = box_corners(box_a);
     const corners corners_b = box_corners(box_b);
@@ -152,7 +152,7 @@ inline bool separation(const corners& corners_a, const Pyramid& pyramid, const f
 /**
  * @brief Find if a box and a pyramid are intersecting each other.
  */
-bool box_pyramid_sat(const box_t& box, const Pyramid& pyramid) {
+inline bool box_pyramid_sat(const box_t& box, const Pyramid& pyramid) {
     /* Look for a separation on all 25 axes */
     const corners corners_a = box_corners(box);
 

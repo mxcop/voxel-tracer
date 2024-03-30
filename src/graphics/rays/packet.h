@@ -1,5 +1,16 @@
 #pragma once
 
+#include "pyramid.h"
+
+struct alignas(64) RayPacket8x8 {
+    Ray rays[8 * 8];
+    Pyramid bounds;
+
+    void calc_bounds() {
+        bounds = Pyramid(rays[0].origin, 0, rays[0].dir, rays[7].dir, rays[56].dir);
+    }
+};
+
 /* SIMD (SSE) Ray packet structure. */
 struct alignas(64) RayPacket128 {
     union {

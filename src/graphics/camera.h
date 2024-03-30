@@ -30,6 +30,21 @@ struct Camera {
         return Ray(pos, normalize(ray_end - pos));
     }
 
+    RayPacket8x8 get_packet8x8(const f32 x, const f32 y) const {
+        RayPacket8x8 packet;
+
+        for (u32 v = 0; v < 8; v ++) {
+            for (u32 u = 0; u < 8; u ++) {
+                const u32 ix = x + u, iy = y + v;
+
+                packet.rays[v * 8 + u] = get_primary_ray(ix, iy);
+            }
+        }
+
+        packet.calc_bounds();
+        return packet;
+    }
+
     /* Bundle of 4 x 3D vectors. */
     union QuadBundle {
         struct {

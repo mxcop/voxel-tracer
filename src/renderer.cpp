@@ -82,6 +82,42 @@ TraceResult Renderer::trace(Ray& ray, const u32 x, const u32 y, bool debug) cons
     return result;
 }
 
+TraceResult8x8 Renderer::trace(const RayPacket8x8& packet, const u32 x, const u32 y,
+                               bool debug) const {
+    TraceResult8x8 results;
+
+    /* Intersect the scene */
+    const PacketHit8x8 hits = scene.coherent_intersect(packet);
+
+    for (u32 r = 0; r < 8 * 8; r++) {
+        const HitInfo& hit = hits.hits[r];
+        TraceResult& result = results.results[r];
+        result = TraceResult(hit);
+
+        /* Handle special display modes, for debugging */
+        if (dev::display_modes(hit, result)) continue;
+
+        /* Return if we didn't hit a surface (result already has sky albedo) */
+        if (hit.no_hit()) {
+            result.no_reproject();
+            continue;
+        }
+
+        /* Create a blue noise sampler */
+        const NoiseSampler noise(bnoise, x, y, frame);  // TODO: fix the noise offset x,y
+
+        /* Get the intersection point */
+        const float3 hit_point = packet.rays[r].intersection(hit);
+
+        /* Evaluate material */
+        MatEval eval;
+        eval_material(eval, packet.rays[r], hit, scene, noise);
+        result.albedo = eval.albedo, result.irradiance = fmaxf(eval.irradiance, 0);
+    }
+
+    return results;
+}
+
 #if 0
 TraceResult Renderer::trace(Ray& ray, HitInfo& hit, const u32 x, const u32 y, bool debug) const {
     TraceResult result;
@@ -469,6 +505,37 @@ void Renderer::tick(f32 dt) {
 #ifndef PROFILING
 #pragma omp parallel for schedule(dynamic)
 #endif
+#if PACKET_TRACE
+    for (i32 y = 0; y < WIN_HEIGHT; y += 8) {
+        for (i32 x = 0; x < WIN_WIDTH; x += 8) {
+            const RayPacket8x8 packet = camera.get_packet8x8(x, y);
+            const TraceResult8x8 results = trace(packet, x, y);
+
+            for (i32 v = 0; v < 8; v++) {
+                for (i32 u = 0; u < 8; u++) {
+                    const i32 ix = x + u, iy = y + v;
+
+                    const Ray& ray = packet.rays[v * 8 + u];
+                    const TraceResult& r = results.results[v * 8 + u];
+                    const float3 albedo = r.albedo;
+
+                    /* Don't reproject if we hit the skybox */
+                    if (r.depth >= BIG_F32 || not r.reproject) {
+                        const float4 c = aces_approx(albedo);
+                        screen->pixels[ix + iy * WIN_WIDTH] = RGBF32_to_RGB8(&c);
+                        continue;
+                    }
+
+                    /* Accumulate and reproject */
+                    const float3 ir = insert_accu(ix, iy, ray, r.irradiance, r.depth);
+                    const float4 c = aces_approx(albedo * ir);
+                    // albedo_buf[x + y * WIN_WIDTH] = albedo;
+                    screen->pixels[ix + iy * WIN_WIDTH] = RGBF32_to_RGB8(&c);
+                }
+            }
+        }
+    }
+#else
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
             Ray ray = camera.get_primary_ray(x, y);
@@ -491,34 +558,13 @@ void Renderer::tick(f32 dt) {
             screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
         }
     }
+#endif
 
-    /* TESTING */
-    db::draw_aabb(0, 1, 0xFFFF0000);
-    box_t test_box;
-    test_box.min = 0, test_box.max = 1;
-    for (i32 y = 0; y < WIN_HEIGHT; y += 16) {
-        for (i32 x = 0; x < WIN_WIDTH; x += 16) {
-            const Ray ray_tl = camera.get_primary_ray(x, y);
-            const Ray ray_tr = camera.get_primary_ray(x + 16, y);
-            const Ray ray_bl = camera.get_primary_ray(x, y + 16);
-            const Pyramid py = Pyramid(camera.pos, normalize(camera.target - camera.pos), ray_tl.dir,
-                                       ray_tr.dir, ray_bl.dir);
-
-            if (box_pyramid_sat(test_box, py)) {
-                for (i32 v = 0; v < 16; v++) {
-                    for (i32 u = 0; u < 16; u++) {
-                        screen->pixels[(x + u) + (y + v) * WIN_WIDTH] |= 0x0000FF00;
-                    }
-                }
-            }
-        }
-    }
-
-    //dev::debug_py.db_draw();
-    //box_pyramid_sat(test_box, dev::debug_py);
-    //if (box_pyramid_sat(test_box, dev::debug_py)) {
-    //    
-    //}
+    // dev::debug_py.db_draw();
+    // box_pyramid_sat(test_box, dev::debug_py);
+    // if (box_pyramid_sat(test_box, dev::debug_py)) {
+    //
+    // }
 
 #if DENOISE
     /* Blur */
@@ -535,13 +581,12 @@ void Renderer::tick(f32 dt) {
 #endif
 
     /* TESTING */
-    //box_t test_box;
-    //test_box.min = 0, test_box.max = 1;
-    //if (box_pyramid_sat(test_box, camera.pyramid))
-    //    db::draw_aabb(0, 1, 0xFF00FF00);
-    //else
-    //    db::draw_aabb(0, 1, 0xFFFF0000);
-
+    // box_t test_box;
+    // test_box.min = 0, test_box.max = 1;
+    // if (box_pyramid_sat(test_box, camera.pyramid))
+    //     db::draw_aabb(0, 1, 0xFF00FF00);
+    // else
+    //     db::draw_aabb(0, 1, 0xFFFF0000);
 
     /* Swap the accumulator and the previous frame pointers */
     /* Faster than copying everything from the accu to the prev */
@@ -654,15 +699,15 @@ void Renderer::MouseDown(int button) {
  * @brief Reproject onto the current frame and accumulate. (without tonemapping)
  * @return The color to display on screen for this pixel.
  */
-inline float3 Renderer::insert_accu(const u32 x, const u32 y, const Ray& ray,
-                                        const float3& c, const f32 d) const {
+inline float3 Renderer::insert_accu(const u32 x, const u32 y, const Ray& ray, const float3& c,
+                                    const f32 d) const {
 #ifdef DEV
     if (not dev::use_projection) return c;
 #endif
 
     /* Reproject (c.w is the depth) */
     float3 acc_color = c;
-    f32 confidence = 0.9f;
+    f32 confidence = 0.95f;
 
     const float2 prev_uv = camera.prev_pyramid.project(ray.origin + ray.dir * d);
 

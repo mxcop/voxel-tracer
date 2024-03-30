@@ -36,6 +36,12 @@ class Scene {
     HitInfo intersect(const Ray& ray) const;
 
     /**
+     * @brief Intersect the scene with a ray.
+     * @return Information about a potential hit.
+     */
+    PacketHit8x8 coherent_intersect(const RayPacket8x8& packet) const;
+
+    /**
      * @return True if the ray hit something before it reached tmax.
      */
     bool is_occluded(const Ray& ray, const f32 tmax = BIG_F32) const;

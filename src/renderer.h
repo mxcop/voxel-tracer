@@ -25,6 +25,7 @@ struct TraceResult {
     f32 depth = BIG_F32;
     bool reproject = true;
 
+    TraceResult() = default;
     explicit TraceResult(const HitInfo& hit)
         : albedo(hit.albedo), irradiance(0), depth(hit.depth) {}
 
@@ -35,12 +36,17 @@ struct TraceResult {
     };
 };
 
+struct TraceResult8x8 {
+    TraceResult results[8 * 8];
+};
+
 class Renderer : public TheApp {
    public:
     /** @brief Initialize the application */
     void init();
     /** @brief Trace the scene */
     TraceResult trace(Ray& ray, const u32 x, const u32 y, bool debug = false) const;
+    TraceResult8x8 trace(const RayPacket8x8& packet, const u32 x, const u32 y, bool debug = false) const;
     /** @brief Called as often as possible */
     void tick(f32 dt);
     /** @brief Called after "tick" for ImGUI rendering */

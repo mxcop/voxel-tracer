@@ -53,6 +53,16 @@ HitInfo Scene::intersect(const Ray& ray) const {
     return hit;
 }
 
+PacketHit8x8 Scene::coherent_intersect(const RayPacket8x8& packet) const {
+    PacketHit8x8 hits = bvh->coherent_intersect(packet);
+    for (u32 r = 0; r < 8 * 8; r++) {
+        /* If the ray misses the scene, use the skydome color */
+        if (hits.hits[r].depth == BIG_F32)
+            hits.hits[r].albedo = skydome.sample_dir(packet.rays[r].dir);
+    }
+    return hits;
+}
+
 /**
  * @return True if the ray hit something before it reached tmax.
  */
