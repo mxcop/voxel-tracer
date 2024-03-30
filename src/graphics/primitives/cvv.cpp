@@ -39,6 +39,13 @@ static f32 entry(const f32 ro, const f32 rd, const f32 min, const f32 max) {
     return (bmin - ro) / rd;  // TODO: maybe try getting rid of division here?
 }
 
+static f32 safe_entry(const f32 ro, const f32 rd, const f32 min, const f32 max) {
+    const bool sign = (rd < 0);
+    const f32 bmin = sign ? max : min;
+    const f32 tmin = (bmin - ro) / rd;
+    return fmaxf(0, tmin);  // TODO: maybe try getting rid of division here?
+}
+
 CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
                                               const bool debug) const {
     CoherentHit4x4 hit;
@@ -109,9 +116,27 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
     u_min = fminf(u_tl, u_br), u_max = fmaxf(u_tl, u_br);
     v_min = fminf(v_tl, v_br), v_max = fmaxf(v_tl, v_br);
 
+    if (debug) {
+        float3 min_p, max_p;
+        min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
+        max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
+
+        /* Draw floating point grid slice */
+        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+    }
+
     /* Next min and max U,V */
     const f32 nu_min = fminf(nu_tl, nu_br), nu_max = fmaxf(nu_tl, nu_br);
     const f32 nv_min = fminf(nv_tl, nv_br), nv_max = fmaxf(nv_tl, nv_br);
+
+    if (debug) {
+        float3 min_p, max_p;
+        min_p[k] = k_t, min_p[u] = nu_min, min_p[v] = nv_min;
+        max_p[k] = k_t, max_p[u] = nu_max, max_p[v] = nv_max;
+
+        /* Draw floating point grid slice */
+        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+    }
 
     /* Slice delta U,V */
     du_min = nu_min - u_min, du_max = nu_max - u_max;
@@ -276,15 +301,17 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     const u32 v = ~(k | u) & 0b11;
 
     /* Bounding box min & max on major axis K */
+    const f32 k_sign = -getsign(ray_tl[k]);
     const f32 k_min = bb.pos[k], k_max = bb.pos[k] + bb.size[k];
 
     /* Compute entry time of top left & bottom left rays along major axis K */
-    const f32 entry_br = entry(origin[k], ray_br[k], k_min, k_max);
-    const f32 entry_tl = entry(origin[k], ray_tl[k], k_min, k_max);
+    const f32 entry_br = safe_entry(origin[k], ray_br[k], k_min, k_max);
+    const f32 entry_tl = safe_entry(origin[k], ray_tl[k], k_min, k_max);
 
     /* Compute next entry time of top left & bottom left rays along major axis K */
-    const f32 next_br = entry(origin[k], ray_br[k], k_min + upv, k_max - upv);
-    const f32 next_tl = entry(origin[k], ray_tl[k], k_min + upv, k_max - upv);
+    const f32 next_k = origin[k] + ray_tl[k] * entry_tl + upv * k_sign;
+    const f32 next_br = entry(origin[k], ray_br[k], next_k, next_k);
+    const f32 next_tl = entry(origin[k], ray_tl[k], next_k, next_k);
 
     /* Entry time along major axis K */
     f32 k_t = (origin[k] + ray_tl[k] * entry_tl) * vpu;
@@ -329,9 +356,27 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     u_min = fminf(u_tl, u_br), u_max = fmaxf(u_tl, u_br);
     v_min = fminf(v_tl, v_br), v_max = fmaxf(v_tl, v_br);
 
+    if (debug) {
+        float3 min_p, max_p;
+        min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
+        max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
+
+        /* Draw floating point grid slice */
+        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+    }
+
     /* Next min and max U,V */
     const f32 nu_min = fminf(nu_tl, nu_br), nu_max = fmaxf(nu_tl, nu_br);
     const f32 nv_min = fminf(nv_tl, nv_br), nv_max = fmaxf(nv_tl, nv_br);
+
+    if (debug) {
+        float3 min_p, max_p;
+        min_p[k] = k_t + -getsign(ray_tl[k]), min_p[u] = nu_min, min_p[v] = nv_min;
+        max_p[k] = k_t + -getsign(ray_tl[k]), max_p[u] = nu_max, max_p[v] = nv_max;
+
+        /* Draw floating point grid slice */
+        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+    }
 
     /* Slice delta U,V */
     du_min = nu_min - u_min, du_max = nu_max - u_max;
@@ -340,6 +385,15 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     /* Slice entry U,V */
     u_min = fminf(u_min, nu_min), u_max = fmaxf(u_max, nu_max);
     v_min = fminf(v_min, nv_min), v_max = fmaxf(v_max, nv_max);
+
+    if (debug) {
+        float3 min_p, max_p;
+        min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
+        max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
+
+        /* Draw floating point grid slice */
+        db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
+    }
 
     // TODO: visualize U,V and NU,NV
 
