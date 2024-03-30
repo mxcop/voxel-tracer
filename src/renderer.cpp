@@ -104,7 +104,7 @@ TraceResult8x8 Renderer::trace(const RayPacket8x8& packet, const u32 x, const u3
         }
 
         /* Create a blue noise sampler */
-        const NoiseSampler noise(bnoise, x, y, frame);  // TODO: fix the noise offset x,y
+        const NoiseSampler noise(bnoise, x + r % 8, y + r / 8, frame);
 
         /* Get the intersection point */
         const float3 hit_point = packet.rays[r].intersection(hit);

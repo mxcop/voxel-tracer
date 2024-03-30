@@ -24,7 +24,7 @@ constexpr f32 VOXEL = 1.0f / 20.0f;
 //#define PROFILING
 
 /* Use packet tracing for primary rays */
-#define PACKET_TRACE 0
+#define PACKET_TRACE 1
 
 /* Inline functions */
 static inline f32 _min(const f32 a, const f32 b) { return a < b ? a : b; };
