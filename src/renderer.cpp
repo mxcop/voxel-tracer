@@ -137,7 +137,7 @@ void Renderer::tick(f32 dt) {
 
                     const float4 normal = hits.normal[id];
                     const float4 c = (normal + 1.0f) * 0.5f;
-                    // const float4 c = hits.depth[id];
+                    // const float4 c = hits.depth[id] / 64.0f;
 
                     screen->pixels[sid] = RGBF32_to_RGB8(&c);
                 }

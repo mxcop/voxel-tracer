@@ -46,7 +46,7 @@ float2 Pyramid::safe_project(const float3& point) const {
     const float4 p = float4(point, 1);
 
     /* Exit if the point is behind the camera */
-    if (dot(forward, p) < 0) return 100'000.0f;
+    if (dot(forward, p) < 0) return -project(point);
 
     return project(point);
 }

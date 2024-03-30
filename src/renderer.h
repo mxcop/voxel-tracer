@@ -51,7 +51,9 @@ class Renderer : public TheApp {
     /* User input */
     void MouseUp(int button) {}
     void MouseDown(int button);
-    void MouseMove(int x, int y) { mousePos.x = x, mousePos.y = y; }
+    void MouseMove(int x, int y) { 
+        mousePos.x = x, mousePos.y = y;
+    }
     void MouseWheel(float y) {}
     void KeyUp(int key) {}
     void KeyDown(int key) {}

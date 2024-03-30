@@ -313,8 +313,8 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     const f32 next_br = entry(origin[k], ray_br[k], next_k, next_k);
     const f32 next_tl = entry(origin[k], ray_tl[k], next_k, next_k);
 
-    /* Entry time along major axis K */
-    f32 k_t = (origin[k] + ray_tl[k] * entry_tl) * vpu;
+    /* Entry time along major axis K (floor + 0.5 is to align k_t to the grid) */
+    f32 k_t = floor((origin[k] + ray_tl[k] * entry_tl) * vpu + 0.5f);
 
     /* Top left & bottom right U,V entry points */
     const f32 u_tl = (origin[u] + ray_tl[u] * entry_tl) * vpu;
@@ -329,10 +329,10 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     const f32 nv_br = (origin[v] + ray_br[v] * next_br) * vpu;
 
     if (debug) {
-        db::draw_line(packet.origin, packet.origin + packet.rays[0] * 2.0f, 0xFFFF0000);
-        db::draw_line(packet.origin, packet.origin + packet.rays[63] * 2.0f, 0xFFFF0000);
-        db::draw_line(packet.origin, packet.origin + packet.rays[7] * 2.0f, 0xFFFF0000);
-        db::draw_line(packet.origin, packet.origin + packet.rays[56] * 2.0f, 0xFFFF0000);
+        db::draw_line(packet.origin, packet.origin + packet.rays[0] * 0.5f, 0xFFFF0000);
+        db::draw_line(packet.origin, packet.origin + packet.rays[63] * 0.5f, 0xFFFF0000);
+        db::draw_line(packet.origin, packet.origin + packet.rays[7] * 0.5f, 0xFFFF0000);
+        db::draw_line(packet.origin, packet.origin + packet.rays[56] * 0.5f, 0xFFFF0000);
     }
 
     /* [du_min, du_max, dv_min, dv_max] */
@@ -395,8 +395,6 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
         db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
     }
 
-    // TODO: visualize U,V and NU,NV
-
     /* Time to trace! */
     const f32 sign = -getsign(ray_tl[k]);
     const f32 min_t = k_min * vpu;
@@ -444,23 +442,23 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
         const float3 pos_step = fmaxf(step, 0);
 
         /* Iterate over cells in slice */
-        u32 inactive_rays = 0;
         for (i32 y = y_min; y <= y_max; y++) {
             for (i32 x = x_min; x <= x_max; x++) {
                 int3 i; /* Cell coordinate */
-                i[k] = k_t, i[u] = x, i[v] = y;
+                i[k] = k_t - sign * 0.01f, i[u] = x, i[v] = y;
+
+                if (debug) {
+                    float3 min_p = i, max_p = i;
+                    max_p[k] += k_sign, max_p[u] += 1.0f, max_p[v] += 1.0f;
+
+                    /* Draw floating point grid slice */
+                    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF0000);
+                }
 
                 /* If the cell is a solid voxel */
                 if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
                     /* Find which rays intersect this voxel */
-                    inactive_rays = 0;
                     for (u32 r = 0; r < 8 * 8; r++) {
-                        /* Only check active rays */
-                        if (hit.depth[r] != BIG_F32) {
-                            inactive_rays++;
-                            // continue;
-                        }
-
                         // TODO: maybe don't do this transform every time?
                         const float3 rd = TransformVector(packet.rays[r], bb.imodel);
                         const float3 ird = 1.0f / rd;
@@ -468,9 +466,19 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
 
                         /* Entry point */
                         const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t);
-                        const float3 entry_p = grid_o + rd * entry_t;
+                        float3 entry_p = grid_o + rd * entry_t;
+                        // entry_p[k] = k_t + k_sign * 0.05f;
                         int3 entry_c = floori(entry_p);
-                        entry_c[k] = k_t;
+                        // entry_c[k] -= k_sign;
+                        // entry_c[k] = k_t - sign;
+
+                        if (debug) {
+                            float3 min_p = floorf(entry_p), max_p = floorf(entry_p);
+                            max_p[k] += k_sign, max_p[u] += 1.0f, max_p[v] += 1.0f;
+
+                            /* Draw floating point grid slice */
+                            db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+                        }
 
                         /* DDA */
                         const float3 delta = fabs(ird);
@@ -478,17 +486,19 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                         u32 axis = k;
                         f32 inner_t = 0;
 
-                        /* Up to 3 DDA steps */
-                        for (u32 q = 0; q < 3; q++) {
+                        /* Up to 5 DDA steps */
+                        for (u32 q = 0; q < 5; q++) {
                             /* Stop if depth is higher or equal to previously found depth */
                             if (hit.depth[r] <= (entry_t + inner_t) * upv) break;
 
                             /* Hit! */
                             if (entry_c[u] == i[u] && entry_c[v] == i[v]) {
-                                inactive_rays++;
                                 hit.depth[r] = (entry_t + inner_t) * upv;
                                 /* Normal */
-                                hit.normal[r] = 0, hit.normal[r][axis] = -step[axis];
+                                if (axis != 0xFF)
+                                    hit.normal[r] = 0, hit.normal[r][axis] = -step[axis];
+                                else
+                                    hit.normal[r] = 1;
                                 break;
                             }
 
@@ -497,18 +507,18 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                             if (tmax[u] < tmax[v]) {
                                 if (tmax[u] < tmax[k]) {
                                     entry_c[u] += step[u];
-                                    axis = u;
                                     inner_t = tmax[u];
                                     tmax[u] += delta[u];
+                                    axis = u;
                                 } else {
                                     break;
                                 }
                             } else {
                                 if (tmax[v] < tmax[k]) {
                                     entry_c[v] += step[v];
-                                    axis = v;
                                     inner_t = tmax[v];
                                     tmax[v] += delta[v];
+                                    axis = v;
                                 } else {
                                     break;
                                 }
@@ -516,6 +526,14 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                         }
                     }
                 }
+            }
+        }
+
+        u32 inactive_rays = 0;
+        for (u32 r = 0; r < 8 * 8; r++) {
+            /* Only check active rays */
+            if (hit.depth[r] != BIG_F32) {
+                inactive_rays++;
             }
         }
 
