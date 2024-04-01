@@ -214,7 +214,7 @@ CoherentHit4x4 CoherentVoxelVolume::intersect(const CoherentPacket4x4& packet,
                         const float3 rd = TransformVector(packet.rays[r], bb.imodel);
                         const float3 ird = 1.0f / rd;
                         const float3 grid_o = origin * vpu;
-                        
+
                         /* Entry point */
                         const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t);
                         const float3 entry_p = grid_o + rd * entry_t;
@@ -356,44 +356,48 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     u_min = fminf(u_tl, u_br), u_max = fmaxf(u_tl, u_br);
     v_min = fminf(v_tl, v_br), v_max = fmaxf(v_tl, v_br);
 
-    //if (debug) {
-    //    float3 min_p, max_p;
-    //    min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
-    //    max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
+    if (debug) {
+        float3 min_p, max_p;
+        min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
+        max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
 
-    //    /* Draw floating point grid slice */
-    //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
-    //}
+        /* Draw floating point grid slice */
+        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+    }
 
     /* Next min and max U,V */
     const f32 nu_min = fminf(nu_tl, nu_br), nu_max = fmaxf(nu_tl, nu_br);
     const f32 nv_min = fminf(nv_tl, nv_br), nv_max = fmaxf(nv_tl, nv_br);
 
-    //if (debug) {
-    //    float3 min_p, max_p;
-    //    min_p[k] = k_t + -getsign(ray_tl[k]), min_p[u] = nu_min, min_p[v] = nv_min;
-    //    max_p[k] = k_t + -getsign(ray_tl[k]), max_p[u] = nu_max, max_p[v] = nv_max;
+    if (debug) {
+        float3 min_p, max_p;
+        min_p[k] = k_t + -getsign(ray_tl[k]), min_p[u] = nu_min, min_p[v] = nv_min;
+        max_p[k] = k_t + -getsign(ray_tl[k]), max_p[u] = nu_max, max_p[v] = nv_max;
 
-    //    /* Draw floating point grid slice */
-    //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
-    //}
+        /* Draw floating point grid slice */
+        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+    }
 
     /* Slice delta U,V */
     du_min = nu_min - u_min, du_max = nu_max - u_max;
     dv_min = nv_min - v_min, dv_max = nv_max - v_max;
 
-    /* Slice entry U,V */
+    /* Slice entry U,V (combining the first and next slice) */
     u_min = fminf(u_min, nu_min), u_max = fmaxf(u_max, nu_max);
     v_min = fminf(v_min, nv_min), v_max = fmaxf(v_max, nv_max);
 
-    //if (debug) {
-    //    float3 min_p, max_p;
-    //    min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
-    //    max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
+    if (k_sign < 0) {
+        slice = _mm_sub_ps(slice, delta_slice);
+    }
 
-    //    /* Draw floating point grid slice */
-    //    db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
-    //}
+    if (debug) {
+        float3 min_p, max_p;
+        min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
+        max_p[k] = k_t + 1, max_p[u] = u_max, max_p[v] = v_max;
+
+        /* Draw floating point grid slice */
+        db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
+    }
 
     /* Time to trace! */
     const f32 sign = -getsign(ray_tl[k]);
@@ -402,15 +406,14 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
 
     /* Move back by 1 slice, because we first move then check! */
     slice = _mm_sub_ps(slice, delta_slice);
-    if (k_sign < 0) slice = _mm_sub_ps(slice, delta_slice);
 
     for (k_t; k_t >= min_t && k_t < max_t; k_t += sign) {
         /* Move to the next slice */
         slice = _mm_add_ps(slice, delta_slice);
 
         /* Skip any slice 100% outside the grid */
-        if (u_max < 0.0f || v_max < 0.0f) continue;
-        if (u_min >= grid_size[u] || v_min >= grid_size[v]) continue;
+        //if (u_max < 0.0f || v_max < 0.0f) continue;
+        //if (u_min >= grid_size[u] || v_min >= grid_size[v]) continue;
 
         /* Truncate the floating point slice */
         const f128 fslice = _mm_floor_ps(slice);
@@ -438,6 +441,10 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
             db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
         }
 
+        /* Skip any slice 100% outside the grid */
+        if (u_max < 0.0f || v_max < 0.0f) continue;
+        if (u_min >= grid_size[u] || v_min >= grid_size[v]) continue;
+
         const int3 step = make_int3(-getsign(ray_tl.x), -getsign(ray_tl.y), -getsign(ray_tl.z));
         const float3 pos_step = fmaxf(step, 0);
 
@@ -447,8 +454,8 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                 int3 i; /* Cell coordinate */
                 i[k] = k_t, i[u] = x, i[v] = y;
 
-                //if (debug) {
-                //    float3 min_p = i, max_p = i + 1;
+                // if (debug) {
+                //     float3 min_p = i, max_p = i + 1;
 
                 //    /* Draw floating point grid slice */
                 //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF0000);
@@ -456,6 +463,13 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
 
                 /* If the cell is a solid voxel */
                 if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
+                    if (debug) {
+                        float3 min_p = i, max_p = i + 1;
+
+                        /* Draw floating point grid slice */
+                        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+                    }
+
                     /* Find which rays intersect this voxel */
                     for (u32 r = 0; r < 8 * 8; r++) {
                         // TODO: maybe don't do this transform every time?
@@ -464,25 +478,21 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                         const float3 grid_o = origin * vpu;
 
                         /* Entry point */
-                        const f32 entry_t = entry(grid_o[k], rd[k], k_t - k_sign, k_t - k_sign) + 0.01f;
+                        const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t);
                         float3 entry_p = grid_o + rd * entry_t;
-                        // entry_p[k] = k_t;
-                        // entry_p[k] = k_t + k_sign * 0.05f;
                         int3 entry_c = floori(entry_p);
-                        // entry_c[k] -= k_sign;
-                        // entry_c[k] = k_t - sign;
 
-                         if (debug) {
-                            db::draw_line(origin, origin + packet.rays[r] * entry_t * upv,
-                                          0xFF0000FF);
-                        }
+                        // if (debug) {
+                        //     db::draw_line(origin, origin + packet.rays[r] * entry_t * upv,
+                        //                   0xFF0000FF);
+                        // }
 
-                        if (debug) {
-                            float3 min_p = floorf(entry_p), max_p = min_p + 1;
+                        // if (debug) {
+                        //     float3 min_p = floorf(entry_p), max_p = min_p + 1;
 
-                            /* Draw floating point grid slice */
-                            db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
-                        }
+                        //    /* Draw floating point grid slice */
+                        //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+                        //}
 
                         /* DDA */
                         const float3 delta = fabs(ird);
