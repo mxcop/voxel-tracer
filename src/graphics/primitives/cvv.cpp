@@ -16,7 +16,7 @@ CoherentVoxelVolume::CoherentVoxelVolume(const float3& pos, const int3& grid_siz
         for (u32 y = 0; y < grid_size.y; y++) {
             for (u32 x = 0; x < grid_size.x; x++) {
                 const u32 i = (z * grid_size.y * grid_size.x) + (y * grid_size.x) + x;
-                #if 0
+                #if 1
                 const f32 noise =
                     noise3D((f32)x / grid_size.x, (f32)y / grid_size.y, (f32)z / grid_size.z);
                 if (noise > 0.09f) {
@@ -296,9 +296,11 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                                               const bool debug) const {
     CoherentHit8x8 hit;
 
-    /* Grab the 2 corner rays */
+    /* Grab the 4 corner rays */
     const float3 origin = TransformPosition(packet.origin, bb.imodel);
     const float3 ray_tl = TransformVector(packet.rays[0], bb.imodel);
+    const float3 ray_tr = TransformVector(packet.rays[7], bb.imodel);
+    const float3 ray_bl = TransformVector(packet.rays[56], bb.imodel);
     const float3 ray_br = TransformVector(packet.rays[63], bb.imodel);
     const f32 upv = 1.0f / vpu;
 
@@ -312,28 +314,44 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     const f32 k_sign = -getsign(ray_tl[k]);
     const f32 k_min = bb.pos[k], k_max = bb.pos[k] + bb.size[k] - upv;
 
-    /* Compute entry time of top left & bottom left rays along major axis K */
-    const f32 entry_br = safe_entry(origin[k], ray_br[k], k_min, k_max);
+    /* Compute entry time of the corner rays along major axis K */
     const f32 entry_tl = safe_entry(origin[k], ray_tl[k], k_min, k_max);
+    const f32 entry_tr = safe_entry(origin[k], ray_tr[k], k_min, k_max);
+    const f32 entry_bl = safe_entry(origin[k], ray_bl[k], k_min, k_max);
+    const f32 entry_br = safe_entry(origin[k], ray_br[k], k_min, k_max);
 
-    /* Compute next entry time of top left & bottom left rays along major axis K */
+    /* Compute next entry time of the corner rays along major axis K */
     const f32 next_k = origin[k] + ray_tl[k] * entry_tl + upv * k_sign;
-    const f32 next_br = entry(origin[k], ray_br[k], next_k, next_k);
     const f32 next_tl = entry(origin[k], ray_tl[k], next_k, next_k);
+    const f32 next_tr = entry(origin[k], ray_tr[k], next_k, next_k);
+    const f32 next_bl = entry(origin[k], ray_bl[k], next_k, next_k);
+    const f32 next_br = entry(origin[k], ray_br[k], next_k, next_k);
 
     /* Entry time along major axis K (floor + 0.5 is to align k_t to the grid) */
     f32 k_t = floor((origin[k] + ray_tl[k] * entry_tl) * vpu + 0.5f);
+    //const f32 k_o = fracf((origin[k] + ray_tl[k] * entry_tl) * vpu);
+    // FIX: k_t is being aligned to the grid, but this desyncs it with our entry and exit point...
 
-    /* Top left & bottom right U,V entry points */
+    /* Corner U,V entry points */
     const f32 u_tl = (origin[u] + ray_tl[u] * entry_tl) * vpu;
+    const f32 u_tr = (origin[u] + ray_tr[u] * entry_tr) * vpu;
+    const f32 u_bl = (origin[u] + ray_bl[u] * entry_bl) * vpu;
     const f32 u_br = (origin[u] + ray_br[u] * entry_br) * vpu;
+
     const f32 v_tl = (origin[v] + ray_tl[v] * entry_tl) * vpu;
+    const f32 v_tr = (origin[v] + ray_tr[v] * entry_tr) * vpu;
+    const f32 v_bl = (origin[v] + ray_bl[v] * entry_bl) * vpu;
     const f32 v_br = (origin[v] + ray_br[v] * entry_br) * vpu;
 
-    /* Next top left & bottom right U,V bounding points */
+    /* Next corner U,V bounding points */
     const f32 nu_tl = (origin[u] + ray_tl[u] * next_tl) * vpu;
+    const f32 nu_tr = (origin[u] + ray_tr[u] * next_tr) * vpu;
+    const f32 nu_bl = (origin[u] + ray_bl[u] * next_bl) * vpu;
     const f32 nu_br = (origin[u] + ray_br[u] * next_br) * vpu;
+
     const f32 nv_tl = (origin[v] + ray_tl[v] * next_tl) * vpu;
+    const f32 nv_tr = (origin[v] + ray_tr[v] * next_tr) * vpu;
+    const f32 nv_bl = (origin[v] + ray_bl[v] * next_bl) * vpu;
     const f32 nv_br = (origin[v] + ray_br[v] * next_br) * vpu;
 
     if (debug) {
@@ -361,8 +379,10 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     };
 
     /* Entry min and max U,V */
-    u_min = fminf(u_tl, u_br), u_max = fmaxf(u_tl, u_br);
-    v_min = fminf(v_tl, v_br), v_max = fmaxf(v_tl, v_br);
+    u_min = fminf(fminf(u_tl, u_br), fminf(u_tr, u_bl));
+    u_max = fmaxf(fmaxf(u_tl, u_br), fmaxf(u_tr, u_bl));
+    v_min = fminf(fminf(v_tl, v_br), fminf(v_tr, v_bl));
+    v_max = fmaxf(fmaxf(v_tl, v_br), fmaxf(v_tr, v_bl));
 
     if (debug) {
         float3 min_p, max_p;
@@ -374,13 +394,15 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     }
 
     /* Next min and max U,V */
-    const f32 nu_min = fminf(nu_tl, nu_br), nu_max = fmaxf(nu_tl, nu_br);
-    const f32 nv_min = fminf(nv_tl, nv_br), nv_max = fmaxf(nv_tl, nv_br);
+    const f32 nu_min = fminf(fminf(nu_tl, nu_br), fminf(nu_tr, nu_bl));
+    const f32 nu_max = fmaxf(fmaxf(nu_tl, nu_br), fmaxf(nu_tr, nu_bl));
+    const f32 nv_min = fminf(fminf(nv_tl, nv_br), fminf(nv_tr, nv_bl));
+    const f32 nv_max = fmaxf(fmaxf(nv_tl, nv_br), fmaxf(nv_tr, nv_bl));
 
     if (debug) {
         float3 min_p, max_p;
-        min_p[k] = k_t + -getsign(ray_tl[k]), min_p[u] = nu_min, min_p[v] = nv_min;
-        max_p[k] = k_t + -getsign(ray_tl[k]), max_p[u] = nu_max, max_p[v] = nv_max;
+        min_p[k] = next_k * vpu, min_p[u] = nu_min, min_p[v] = nv_min;
+        max_p[k] = next_k * vpu, max_p[u] = nu_max, max_p[v] = nv_max;
 
         /* Draw floating point grid slice */
         db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
@@ -394,6 +416,12 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     u_min = fminf(u_min, nu_min), u_max = fmaxf(u_max, nu_max);
     v_min = fminf(v_min, nv_min), v_max = fmaxf(v_max, nv_max);
 
+    // TODO: fix the offset due to being inside grid.
+    //if (entry_tl == 0 || entry_tr == 0 || entry_bl == 0 || entry_br == 0) {
+    //    slice = _mm_sub_ps(slice, _mm_mul_ps(delta_slice, _mm_set_ps1(k_o)));
+    //}
+
+    /* Move back by 1 slice if we are moving in the negative direction */
     if (k_sign < 0) {
         slice = _mm_sub_ps(slice, delta_slice);
     }
@@ -408,14 +436,13 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     }
 
     /* Time to trace! */
-    const f32 sign = -getsign(ray_tl[k]);
     const f32 min_t = k_min * vpu;
     const f32 max_t = k_max * vpu;
 
     /* Move back by 1 slice, because we first move then check! */
     slice = _mm_sub_ps(slice, delta_slice);
 
-    for (k_t; k_t >= min_t && k_t <= max_t; k_t += sign) {
+    for (k_t; k_t >= min_t && k_t <= max_t; k_t += k_sign) {
         /* Move to the next slice */
         slice = _mm_add_ps(slice, delta_slice);
 
@@ -487,9 +514,8 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
 
                         /* Entry point */
                         const f32 entry_k = k_t - fminf(k_sign, 0.0f);
-                        const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.01f;
+                        const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.0001f;
                         float3 entry_p = grid_o + rd * entry_t;
-                        // entry_p[k] = k_t;
                         int3 entry_c = floori(entry_p);
 
                          if (debug) {
@@ -509,7 +535,6 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                         /* DDA */
                         const float3 delta = fabs(ird);
                         float3 tmax = ((float3(entry_c) - entry_p) + pos_step) * ird;
-                        // tmax[k] = ird[k];
                         u32 axis = k;
                         f32 inner_t = 0;
 
@@ -565,7 +590,7 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
 
         /* Early exit if all rays are done */
         if (inactive_rays == (8 * 8)) {
-            return hit;
+            break;
         }
     }
 
@@ -575,6 +600,17 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
             hit.normal[r] = normalize(TransformVector(hit.normal[r], bb.model));
         }
     }
+
+    // TODO: whenever this happens, artifacts apear because of a misalingment.
+    //if (entry_br == 0 or entry_tl == 0 or entry_tr == 0 or entry_bl == 0) {
+    //    // if (debug) {
+    //    //     db::draw_normal(0, 0);
+    //    // }
+    //    for (u32 r = 0; r < 8 * 8; r++) {
+    //        hit.normal[r] = 0;
+    //    }
+    //    return hit;
+    //}
 
     return hit;
 }
