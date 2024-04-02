@@ -16,6 +16,7 @@ CoherentVoxelVolume::CoherentVoxelVolume(const float3& pos, const int3& grid_siz
         for (u32 y = 0; y < grid_size.y; y++) {
             for (u32 x = 0; x < grid_size.x; x++) {
                 const u32 i = (z * grid_size.y * grid_size.x) + (y * grid_size.x) + x;
+                #if 0
                 const f32 noise =
                     noise3D((f32)x / grid_size.x, (f32)y / grid_size.y, (f32)z / grid_size.z);
                 if (noise > 0.09f) {
@@ -23,6 +24,13 @@ CoherentVoxelVolume::CoherentVoxelVolume(const float3& pos, const int3& grid_siz
                 } else {
                     set_voxel(x, y, z, 0x00);
                 }
+                #else
+                if (z % 8 == 0) {
+                    set_voxel(x, y, z, 0xFF);
+                } else {
+                    set_voxel(x, y, z, 0x00);
+                }
+                #endif
             }
         }
     }
@@ -302,11 +310,11 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
 
     /* Bounding box min & max on major axis K */
     const f32 k_sign = -getsign(ray_tl[k]);
-    const f32 k_min = bb.pos[k], k_max = bb.pos[k] + bb.size[k];
+    const f32 k_min = bb.pos[k], k_max = bb.pos[k] + bb.size[k] - upv;
 
     /* Compute entry time of top left & bottom left rays along major axis K */
-    const f32 entry_br = safe_entry(origin[k], ray_br[k], k_min, k_max - upv);
-    const f32 entry_tl = safe_entry(origin[k], ray_tl[k], k_min, k_max - upv);
+    const f32 entry_br = safe_entry(origin[k], ray_br[k], k_min, k_max);
+    const f32 entry_tl = safe_entry(origin[k], ray_tl[k], k_min, k_max);
 
     /* Compute next entry time of top left & bottom left rays along major axis K */
     const f32 next_k = origin[k] + ray_tl[k] * entry_tl + upv * k_sign;
@@ -407,7 +415,7 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     /* Move back by 1 slice, because we first move then check! */
     slice = _mm_sub_ps(slice, delta_slice);
 
-    for (k_t; k_t >= min_t && k_t < max_t; k_t += sign) {
+    for (k_t; k_t >= min_t && k_t <= max_t; k_t += sign) {
         /* Move to the next slice */
         slice = _mm_add_ps(slice, delta_slice);
 
@@ -478,25 +486,30 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                         const float3 grid_o = origin * vpu;
 
                         /* Entry point */
-                        const f32 entry_t = entry(grid_o[k], rd[k], k_t, k_t);
+                        const f32 entry_k = k_t - fminf(k_sign, 0.0f);
+                        const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.01f;
                         float3 entry_p = grid_o + rd * entry_t;
+                        // entry_p[k] = k_t;
                         int3 entry_c = floori(entry_p);
 
-                        // if (debug) {
-                        //     db::draw_line(origin, origin + packet.rays[r] * entry_t * upv,
-                        //                   0xFF0000FF);
-                        // }
+                         if (debug) {
+                            float3 min_p = 0;
+                            min_p[k] = 1;
+                            db::draw_line(entry_p * upv, (entry_p + min_p) * upv,
+                                           0xFF0000FF);
+                         }
 
-                        // if (debug) {
-                        //     float3 min_p = floorf(entry_p), max_p = min_p + 1;
+                         if (debug) {
+                             float3 min_p = floorf(entry_p), max_p = min_p + 1;
 
-                        //    /* Draw floating point grid slice */
-                        //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
-                        //}
+                            /* Draw floating point grid slice */
+                            db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF0000);
+                        }
 
                         /* DDA */
                         const float3 delta = fabs(ird);
                         float3 tmax = ((float3(entry_c) - entry_p) + pos_step) * ird;
+                        // tmax[k] = ird[k];
                         u32 axis = k;
                         f32 inner_t = 0;
 
@@ -509,10 +522,7 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                             if (entry_c[u] == i[u] && entry_c[v] == i[v]) {
                                 hit.depth[r] = (entry_t + inner_t) * upv;
                                 /* Normal */
-                                if (axis != 0xFF)
-                                    hit.normal[r] = 0, hit.normal[r][axis] = -step[axis];
-                                else
-                                    hit.normal[r] = 1;
+                                hit.normal[r] = 0, hit.normal[r][axis] = -step[axis];
                                 break;
                             }
 
@@ -525,6 +535,7 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                                     tmax[u] += delta[u];
                                     axis = u;
                                 } else {
+                                    axis = k;
                                     break;
                                 }
                             } else {
@@ -534,6 +545,7 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
                                     tmax[v] += delta[v];
                                     axis = v;
                                 } else {
+                                    axis = k;
                                     break;
                                 }
                             }
