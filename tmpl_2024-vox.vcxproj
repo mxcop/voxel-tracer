@@ -195,9 +195,11 @@
     <ClCompile Include="src\graphics\primitives\basic\sphere.cpp" />
     <ClCompile Include="src\graphics\primitives\brick-volume.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\obb.cpp" />
+    <ClCompile Include="src\graphics\primitives\cvv.cpp" />
     <ClCompile Include="src\graphics\primitives\voxel-volume.cpp" />
     <ClCompile Include="src\graphics\primitives\vv.cpp" />
     <ClCompile Include="src\graphics\rays\frustum.cpp" />
+    <ClCompile Include="src\graphics\rays\packet.cpp" />
     <ClCompile Include="src\graphics\rays\pyramid.cpp" />
     <ClCompile Include="src\graphics\scene.cpp" />
     <ClCompile Include="src\graphics\skydome.cpp" />
@@ -250,6 +252,7 @@
     <ClInclude Include="src\graphics\primitives\basic\sphere.h" />
     <ClInclude Include="src\graphics\primitives\brick-volume.h" />
     <ClInclude Include="src\graphics\primitives\basic\obb.h" />
+    <ClInclude Include="src\graphics\primitives\cvv.h" />
     <ClInclude Include="src\graphics\primitives\traceable.h" />
     <ClInclude Include="src\graphics\primitives\vv.h" />
     <ClInclude Include="src\graphics\rays\frustum.h" />

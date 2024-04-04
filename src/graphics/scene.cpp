@@ -28,6 +28,9 @@ Scene::Scene() {
 
     /* Load the HDR skydome */
     skydome = SkyDome("assets/kiara_1_dawn_4k.hdr");
+
+    // TEMP: testing
+    cvv = new CoherentVoxelVolume(0, 32, 32);
 }
 
 Scene::~Scene() {

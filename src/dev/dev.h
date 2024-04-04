@@ -6,6 +6,7 @@ class Pyramid;
 struct TraceResult;
 struct HitInfo;
 struct Ray;
+struct CoherentPacket8x8;
 
 namespace Tmpl8 {
 class Surface;

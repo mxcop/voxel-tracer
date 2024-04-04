@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primitives/cvv.h"
+
 class Scene {
     /* Bounding volume hierarchy */
     Bvh* bvh = nullptr;
@@ -12,6 +14,9 @@ class Scene {
    public:
     /* Lighting */
     vector<SphereLight> lights;
+
+    // TEMP: testing coherent traversal
+    CoherentVoxelVolume* cvv = nullptr;
 
     /* Direction pointing towards the sun */
     const float3 sun_dir = {-0.619501f, 0.465931f, -0.631765f};
