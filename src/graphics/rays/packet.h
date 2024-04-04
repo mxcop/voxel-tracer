@@ -7,7 +7,8 @@ struct alignas(64) RayPacket8x8 {
     Pyramid bounds;
 
     void calc_bounds() {
-        bounds = Pyramid(rays[0].origin, 0, rays[0].dir, rays[7].dir, rays[56].dir);
+        bounds = Pyramid(rays[0].origin, (rays[0].dir + rays[63].dir) * 0.5f, rays[0].dir, rays[7].dir,
+                         rays[56].dir);
     }
 };
 

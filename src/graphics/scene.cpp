@@ -2,26 +2,39 @@
 
 Scene::Scene() {
     /* Material testing shape */
-    shapes_len = 7;
+    shapes_len = 1;
     shapes = new Traceable* [shapes_len] {};
 
-    const char* robot_m = "assets/vox/small-robot-walker.vox";
+    auto cube = new OVoxelVolume(0, "assets/vox/testing/dragon.vox", 0);
+    //cube->set_rotation(quat::from_axis_angle({0, 1, 0}, 1));
+    shapes[0] = cube;
+
+    //for (u32 z = 0; z < 8; z++) {
+    //    for (u32 y = 0; y < 8; y++) {
+    //        for (u32 x = 0; x < 8; x++) {
+    //            shapes[z * 8 * 8 + y * 8 + x] = new OVoxelVolume(
+    //                {x * 4.0f, y * 4.0f, z * 4.0f}, "assets/vox/testing/cube32.vox", 0);
+    //        }
+    //    }
+    //}
+
+    //const char* robot_m = "assets/vox/small-robot-walker.vox";
     /* Head & body */
-    auto head = new OVoxelVolume({VOXEL * 4, VOXEL * 14, VOXEL * 4}, robot_m, 0);
-    head->set_pivot(VOXEL * 4);
-    head->set_rotation(quat::from_axis_angle({0, 1, 0}, 0));
-    shapes[0] = head;
-    shapes[1] = new OVoxelVolume({0, VOXEL * 3, 0}, robot_m, 1);
+    //auto head = new OVoxelVolume({VOXEL * 4, VOXEL * 14, VOXEL * 4}, robot_m, 0);
+    //head->set_pivot(VOXEL * 4);
+    //head->set_rotation(quat::from_axis_angle({0, 1, 0}, 0));
+    //shapes[0] = head;
+    //shapes[1] = new OVoxelVolume({0, VOXEL * 3, 0}, robot_m, 1);
 
     /* Legs */
-    shapes[2] = new OVoxelVolume({VOXEL * 5, 0, VOXEL * -5}, robot_m, 3);
-    shapes[3] = new OVoxelVolume({VOXEL * 5, 0, VOXEL * 5}, robot_m, 4);
-    shapes[4] = new OVoxelVolume({VOXEL * -5, 0, VOXEL * 5}, robot_m, 5);
-    shapes[5] = new OVoxelVolume({VOXEL * -5, 0, VOXEL * -5}, robot_m, 6);
+    //shapes[2] = new OVoxelVolume({VOXEL * 5, 0, VOXEL * -5}, robot_m, 3);
+    //shapes[3] = new OVoxelVolume({VOXEL * 5, 0, VOXEL * 5}, robot_m, 4);
+    //shapes[4] = new OVoxelVolume({VOXEL * -5, 0, VOXEL * 5}, robot_m, 5);
+    //shapes[5] = new OVoxelVolume({VOXEL * -5, 0, VOXEL * -5}, robot_m, 6);
 
     // shapes[3] = new OVoxelVolume({2, 0, 0}, "assets/vox/small-robot-walker.vox", 2);
 
-    shapes[6] = new AABB({-10, -1, -10}, {10, 0, 10}, {1, 1, 1});
+    // shapes[6] = new AABB({-10, -1, -10}, {10, 0, 10}, {1, 1, 1});
 
     /* Initialize the BVH */
     bvh = new Bvh(shapes_len, shapes);
@@ -30,7 +43,7 @@ Scene::Scene() {
     skydome = SkyDome("assets/kiara_1_dawn_4k.hdr");
 
     // TEMP: testing
-    cvv = new CoherentVoxelVolume(0, 32, 32);
+    // cvv = new CoherentVoxelVolume(0, 32, 32);
 }
 
 Scene::~Scene() {
@@ -56,8 +69,8 @@ HitInfo Scene::intersect(const Ray& ray) const {
     return hit;
 }
 
-PacketHit8x8 Scene::coherent_intersect(const RayPacket8x8& packet) const {
-    PacketHit8x8 hits = bvh->coherent_intersect(packet);
+PacketHit8x8 Scene::coherent_intersect(const RayPacket8x8& packet, bool debug) const {
+    PacketHit8x8 hits = bvh->coherent_intersect(packet, debug);
     for (u32 r = 0; r < 8 * 8; r++) {
         /* If the ray misses the scene, use the skydome color */
         if (hits.hits[r].depth == BIG_F32)

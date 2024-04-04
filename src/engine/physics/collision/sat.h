@@ -149,10 +149,19 @@ inline bool separation(const corners& corners_a, const Pyramid& pyramid, const f
     return true; /* Separating plane found! */
 }
 
+inline f32 projected_dist(const corners& corners_a, const Pyramid& pyramid) {
+    const float3 n = pyramid.forward;
+    f32 a_min, a_max;
+    projected_minmax(corners_a, n, a_min, a_max);
+    const f32 proj = project_onto(pyramid.origin, n);
+    const f32 dist = a_min - proj;
+    return dist;
+}
+
 /**
  * @brief Find if a box and a pyramid are intersecting each other.
  */
-inline bool box_pyramid_sat(const box_t& box, const Pyramid& pyramid) {
+inline f32 box_pyramid_sat(const box_t& box, const Pyramid& pyramid) {
     /* Look for a separation on all 25 axes */
     const corners corners_a = box_corners(box);
 
@@ -163,7 +172,7 @@ inline bool box_pyramid_sat(const box_t& box, const Pyramid& pyramid) {
 
         /* Check for separation */
         if (separation(corners_a, pyramid, normal)) {
-            return false; /* Separating plane found! */
+            return BIG_F32; /* Separating plane found! */
         }
     }
 
@@ -175,28 +184,28 @@ inline bool box_pyramid_sat(const box_t& box, const Pyramid& pyramid) {
 
         /* Check for separation */
         if (separation(corners_a, pyramid, normal)) {
-            return false; /* Separating plane found! */
+            return BIG_F32; /* Separating plane found! */
         }
     }
 
     /* Check cross products (18 axes) */
-    for (u32 an = 0; an < 3; ++an) {
-        /* Get a rotated normal */
-        const float3 normal_a = rot_a[an];
+    //for (u32 an = 0; an < 3; ++an) {
+    //    /* Get a rotated normal */
+    //    const float3 normal_a = rot_a[an];
 
-        for (u32 bn = 0; bn < 6; ++bn) {
-            /* Get a rotated normal */
-            const float3 normal_b = pyramid.rays[bn];
+    //    for (u32 bn = 0; bn < 6; ++bn) {
+    //        /* Get a rotated normal */
+    //        const float3 normal_b = pyramid.rays[bn];
 
-            /* Cross projection normal */
-            const float3 normal = normalize(cross(normal_b, normal_a));
+    //        /* Cross projection normal */
+    //        const float3 normal = normalize(cross(normal_b, normal_a));
 
-            /* Check for separation */
-            if (separation(corners_a, pyramid, normal)) {
-                return false; /* Separating plane found! */
-            }
-        }
-    }
+    //        /* Check for separation */
+    //        if (separation(corners_a, pyramid, normal)) {
+    //            return BIG_F32; /* Separating plane found! */
+    //        }
+    //    }
+    //}
 
-    return true;
+    return projected_dist(corners_a, pyramid);
 }

@@ -71,7 +71,7 @@ class Bvh {
      * @brief Intersect the BVH and return information about a potential hit.
      */
     HitInfo intersect(const Ray& ray) const;
-    PacketHit8x8 coherent_intersect(const RayPacket8x8& packet) const;
+    PacketHit8x8 coherent_intersect(const RayPacket8x8& packet, bool debug = false) const;
 
     PacketHitInfo intersect(const RayPacket128& packet) const;
 

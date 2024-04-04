@@ -268,7 +268,7 @@ HitInfo Bvh::intersect(const Ray& ray) const {
     return result;
 }
 
-PacketHit8x8 Bvh::coherent_intersect(const RayPacket8x8& packet) const {
+PacketHit8x8 Bvh::coherent_intersect(const RayPacket8x8& packet, bool debug) const {
     PacketHit8x8 hits;
 
     const Node *node = &nodes[root_idx], *node_stack[64];
@@ -276,23 +276,62 @@ PacketHit8x8 Bvh::coherent_intersect(const RayPacket8x8& packet) const {
     for (u32 stack_ptr = 0;;) {
         /* If the current node is a leaf... */
         if (node->is_leaf()) {
-            for (u32 r = 0; r < 8 * 8; r++) {
-                /* Check if we hit any primitives */
-                for (u32 i = 0; i < node->prim_count; ++i) {
-                    const Traceable& prim = *prims[node->left_first + i];
+            //for (u32 r = 0; r < 8 * 8; r++) {
+            //    hits.hits[r].albedo = 1.0f;
+            //    hits.hits[r].depth = 32.0f;
+            //}
+            //return hits;
+            //for (u32 r = 0; r < 8 * 8; r++) {
+            //    /* Check if we hit any primitives */
+            //    for (u32 i = 0; i < node->prim_count; ++i) {
+            //        const Traceable& prim = *prims[node->left_first + i];
 
-                    const HitInfo hit = prim.intersect(packet.rays[r]);
+            //        const HitInfo hit = prim.intersect(packet.rays[r]);
 
-                    if (hit.steps)
-                        steps += hit.steps;
-                    else
-                        steps++;
+            //        if (hit.steps)
+            //            steps += hit.steps;
+            //        else
+            //            steps++;
 
-                    /* Record a new closest hit */
-                    if (hit.depth < hits.hits[r].depth) {
-                        hits.hits[r] = hit;
-                    }
+            //        /* Record a new closest hit */
+            //        if (hit.depth < hits.hits[r].depth) {
+            //            hits.hits[r] = hit;
+            //        }
+            //    }
+            //}
+            /* Check if we hit any primitives */
+            for (u32 i = 0; i < node->prim_count; ++i) {
+                const Traceable& prim = *prims[node->left_first + i];
+
+                const AABB aabb = prim.get_aabb();
+                box_t aabb1;
+                aabb1.min = aabb.min;
+                aabb1.max = aabb.max;
+                f32 dist1 = box_pyramid_sat(aabb1, packet.bounds);
+
+                if (dist1 >= BIG_F32) continue;
+
+                f32 max_depth = 0;
+                for (u32 r = 0; r < 8 * 8; r++) {
+                    max_depth = fmaxf(max_depth, hits.hits[r].depth);
                 }
+                if (max_depth < dist1) continue;
+
+                const PacketHit8x8 hit = prim.intersect(packet, debug);
+
+                for (u32 r = 0; r < 8 * 8; r++) {
+                    const u32 _steps = hits.hits[r].steps + 1;
+                    if (hit.hits[r].depth < hits.hits[r].depth) {
+                        hits.hits[r] = hit.hits[r];
+                    }
+                    hits.hits[r].steps = _steps;
+                }
+                // hits = hit;
+
+                /* Record a new closest hit */
+                //if (hit.depth < hits.hits[r].depth) {
+                //    hits.hits[r] = hit;
+                //}
             }
 
             /* Decend down the stack */
@@ -308,11 +347,11 @@ PacketHit8x8 Bvh::coherent_intersect(const RayPacket8x8& packet) const {
         box_t aabb1;
         aabb1.min = child1->aabb_min;
         aabb1.max = child1->aabb_max;
-        f32 dist1 = box_pyramid_sat(aabb1, packet.bounds) ? 1.0f : BIG_F32;
+        f32 dist1 = box_pyramid_sat(aabb1, packet.bounds);
         box_t aabb2;
         aabb2.min = child2->aabb_min;
         aabb2.max = child2->aabb_max;
-        f32 dist2 = box_pyramid_sat(aabb2, packet.bounds) ? 1.0f : BIG_F32;
+        f32 dist2 = box_pyramid_sat(aabb2, packet.bounds);
         steps += 2;
 
         /* Child to be traversed first should be the closest one */
@@ -332,6 +371,10 @@ PacketHit8x8 Bvh::coherent_intersect(const RayPacket8x8& packet) const {
                 node_stack[stack_ptr++] = child2;
             }
         }
+    }
+
+    for (u32 r = 0; r < 8 * 8; r++) {
+            hits.hits[r].steps += steps;
     }
 
     return hits;

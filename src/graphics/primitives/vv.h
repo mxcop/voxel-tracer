@@ -35,9 +35,9 @@ class OVoxelVolume : public Traceable {
     } brickmap;
 
     /* Voxel material indices, 1 byte each. */
-#if USE_BITPACKING
+// #if USE_BITPACKING
     u8* voxels = nullptr;
-#endif
+// #endif
     int3 grid_size = 0;
 
     /* Voxel material palette, 8 bit rgba. */
@@ -106,9 +106,9 @@ class OVoxelVolume : public Traceable {
     /* Create voxel volume of certain size and fill it with noise */
     OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu = 20.0f);
     ~OVoxelVolume() {
-#if USE_BITPACKING
+// #if USE_BITPACKING
         delete[] voxels;
-#endif
+// #endif
         delete[] palette;
         delete[] brickmap.bricks;
     }
@@ -124,10 +124,13 @@ class OVoxelVolume : public Traceable {
     AABB get_aabb() const override;
     float3 center() const override;
     HitInfo intersect(const Ray& ray) const override;
-
+    PacketHit8x8 intersect(const RayPacket8x8& packet, const bool debug = false) const override;
+    
     void set_pivot(const float3 pivot) { bb.pivot = pivot, this->pivot = pivot; };
     void set_rotation(const quat& rot);
     void set_position(const float3& pos);
+
+    __forceinline i32 getsign(const f32 f) const { return (i32)(((u32&)f) >> 31) * 2 - 1; }
 
     /**
      * @brief Set a voxel in the volume.

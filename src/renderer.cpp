@@ -54,7 +54,6 @@ void Renderer::init() {
  * @brief Ray trace the scene.
  */
 TraceResult Renderer::trace(Ray& ray, const u32 x, const u32 y, bool debug) const {
-#if 1
     /* Intersect the scene */
     const HitInfo hit = scene.intersect(ray);
     TraceResult result(hit);
@@ -84,7 +83,7 @@ TraceResult8x8 Renderer::trace(const RayPacket8x8& packet, const u32 x, const u3
     TraceResult8x8 results;
 
     /* Intersect the scene */
-    const PacketHit8x8 hits = scene.coherent_intersect(packet);
+    const PacketHit8x8 hits = scene.coherent_intersect(packet, debug);
 
     for (u32 r = 0; r < 8 * 8; r++) {
         const HitInfo& hit = hits.hits[r];
@@ -123,11 +122,10 @@ void Renderer::tick(f32 dt) {
     if (frame > 120) frame = 0;
     Timer t;
 
+#if PACKET_TRACE
 #ifndef PROFILING
 #pragma omp parallel for schedule(dynamic)
 #endif
-
-#if PACKET_TRACE
     for (i32 y = 0; y < WIN_HEIGHT; y += 8) {
         for (i32 x = 0; x < WIN_WIDTH; x += 8) {
             const RayPacket8x8 packet = camera.get_packet8x8(x, y);
@@ -158,6 +156,9 @@ void Renderer::tick(f32 dt) {
         }
     }
 #else
+#ifndef PROFILING
+#pragma omp parallel for schedule(dynamic)
+#endif
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
             Ray ray = camera.get_primary_ray(x, y);
@@ -298,10 +299,10 @@ void Renderer::gui(f32 dt) {
     }
 
     // TODO: remove this
-    trace(dev::debug_ray, 0, 0, true);
-    db::draw_aabb(0, 1, 0xFFFF0000);
+    //trace(dev::debug_packet, 0, 0, true);
+    //db::draw_aabb(0, 1, 0xFFFF0000);
     // dev::debug_packet.setup_slice(0, 1, 32);
-    scene.cvv->intersect(dev::debug_packet, true);
+    // scene.cvv->intersect(dev::debug_packet, true);
     // dev::debug_packet.traverse(0, 1, 32);
 }
 
@@ -333,6 +334,8 @@ void Renderer::MouseDown(int button) {
             const Ray ray_bl = camera.get_primary_ray(mp.x, mp.y + 16);
             dev::debug_py = Pyramid(camera.pos, normalize(camera.target - camera.pos), ray_tl.dir,
                                     ray_tr.dir, ray_bl.dir);
+
+            dev::debug_packet = camera.get_packet8x8(mouse_pos.x, mouse_pos.y);
         }
 
         mouse_old = mouse_pos, escaped = false;
@@ -353,7 +356,7 @@ inline float3 Renderer::insert_accu(const u32 x, const u32 y, const Ray& ray, co
 
     /* Reproject (c.w is the depth) */
     float3 acc_color = c;
-    f32 confidence = 0.95f;
+    f32 confidence = 0.99f;
 
     const float2 prev_uv = camera.prev_pyramid.project(ray.origin + ray.dir * d);
 
@@ -391,7 +394,7 @@ inline float3 Renderer::insert_accu(const u32 x, const u32 y, const Ray& ray, co
 
         /* Depth rejection (take into account camera movement "depth_delta") */
         const f32 depth_diff = fabs(sample.w - (d + depth_delta));
-        if (depth_diff < 0.2f) {
+        if (depth_diff < 0.1f) {
             confidence = max(confidence - depth_diff * 3.0f, 0.0f);
             acc_color = sample;
         }

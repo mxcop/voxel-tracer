@@ -11,9 +11,10 @@ Tmpl8::Surface* db_screen = nullptr;
 f32 frame_time = 1;
 
 Ray debug_ray;
+RayPacket8x8 debug_packet;
 Pyramid debug_py;
 
-DisplayMode display_mode = FINAL;
+DisplayMode display_mode = PRIMARY_STEPS;
 
 /**
  * @brief Display development display modes.
@@ -43,7 +44,7 @@ bool display_modes(const HitInfo& hit, TraceResult& r) {
                 r.no_reproject();
                 return true;
             case dev::DM::PRIMARY_STEPS:
-                r.albedo = hit.steps / 64.0f;
+                r.albedo = hit.steps / 8.0f;
                 r.no_reproject();
                 return true;
         }

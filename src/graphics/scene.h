@@ -44,7 +44,7 @@ class Scene {
      * @brief Intersect the scene with a ray.
      * @return Information about a potential hit.
      */
-    PacketHit8x8 coherent_intersect(const RayPacket8x8& packet) const;
+    PacketHit8x8 coherent_intersect(const RayPacket8x8& packet, bool debug = false) const;
 
     /**
      * @return True if the ray hit something before it reached tmax.

@@ -10,7 +10,6 @@ class Pyramid {
     };
 
     /* Used for intersection testing */
-    float3 origin = {};
     float3 far_corners[4] = {};
 
    public:
@@ -19,6 +18,7 @@ class Pyramid {
     float4 forward = {};
 
     /* Used for intersection testing */
+    float3 origin = {};
     float3 rays[6] = {};
 
     Pyramid() = default;
