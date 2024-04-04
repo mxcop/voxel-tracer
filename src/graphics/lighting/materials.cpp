@@ -141,13 +141,13 @@ float3 diffuse_light(const float3& p, const float3& n, const Scene& scene,
     }
 
     /* Pick one at random 50/50 */
-    //if (RandomFloat() <= 0.5f) {
+    if (RandomFloat() <= 0.5f) {
         /* Evaluate the sun light */
-        irradiance += sun_light(p, n, scene, noise);
-    //} else {
+        irradiance += sun_light(p, n, scene, noise) * 2.0f;
+    } else {
         /* Evaluate the ambient light */
-        irradiance += ambient_light(p, n, scene, noise);
-    //}
+        irradiance += ambient_light(p, n, scene, noise) * 2.0f;
+    }
 
     return irradiance;
 }

@@ -30,69 +30,18 @@ struct Camera {
         return Ray(pos, normalize(ray_end - pos));
     }
 
-    /* Get a new coherent primary ray packet from an X and Y pixel coordinate. */
-    inline CoherentPacket4x4 get_coherent_packet(const f32 x, const f32 y) const {
-        CoherentPacket4x4 packet;
-        packet.origin = pos;
+    RayPacket8x8 get_packet8x8(const f32 x, const f32 y) const {
+        RayPacket8x8 packet;
 
-        const f128 win_w = _mm_set_ps1(1.0f / WIN_WIDTH);
-        const f128 win_h = _mm_set_ps1(1.0f / WIN_HEIGHT);
-        for (u32 v = 0; v < 4; v += 2) {
-            for (u32 u = 0; u < 4; u += 2) {
+        for (u32 v = 0; v < 8; v ++) {
+            for (u32 u = 0; u < 8; u ++) {
                 const u32 ix = x + u, iy = y + v;
 
-                /* UV coordinates */
-                const f128 xm = _mm_setr_ps(ix, ix + 1, ix, ix + 1);
-                const f128 ym = _mm_setr_ps(iy, iy, iy + 1, iy + 1);
-                const f128 um = _mm_mul_ps(xm, win_w), vm = _mm_mul_ps(ym, win_h);
-
-                QuadBundle bundle = {};
-                bundle.v1 = (tl + um.m128_f32[0] * (tr - tl) + vm.m128_f32[0] * (bl - tl)) - pos;
-                bundle.v2 = (tl + um.m128_f32[1] * (tr - tl) + vm.m128_f32[1] * (bl - tl)) - pos;
-                bundle.v3 = (tl + um.m128_f32[2] * (tr - tl) + vm.m128_f32[2] * (bl - tl)) - pos;
-                bundle.v4 = (tl + um.m128_f32[3] * (tr - tl) + vm.m128_f32[3] * (bl - tl)) - pos;
-                normalize_bundle(bundle); /* Fast SIMD normalize */
-
-                packet.rays[v * 4 + u] = bundle.v1;
-                packet.rays[v * 4 + (u + 1)] = bundle.v2;
-                packet.rays[(v + 1) * 4 + u] = bundle.v3;
-                packet.rays[(v + 1) * 4 + (u + 1)] = bundle.v4;
+                packet.rays[v * 8 + u] = get_primary_ray(ix, iy);
             }
         }
 
-        return packet;
-    }
-
-    /* Get a new 8x8 coherent primary ray packet from an X and Y pixel coordinate. */
-    inline CoherentPacket8x8 get_coherent_packet8(const f32 x, const f32 y) const {
-        CoherentPacket8x8 packet;
-        packet.origin = pos;
-
-        const f128 win_w = _mm_set_ps1(1.0f / WIN_WIDTH);
-        const f128 win_h = _mm_set_ps1(1.0f / WIN_HEIGHT);
-        for (u32 v = 0; v < 8; v += 2) {
-            for (u32 u = 0; u < 8; u += 2) {
-                const u32 ix = x + u, iy = y + v;
-
-                /* UV coordinates */
-                const f128 xm = _mm_setr_ps(ix, ix + 1, ix, ix + 1);
-                const f128 ym = _mm_setr_ps(iy, iy, iy + 1, iy + 1);
-                const f128 um = _mm_mul_ps(xm, win_w), vm = _mm_mul_ps(ym, win_h);
-
-                QuadBundle bundle = {};
-                bundle.v1 = (tl + um.m128_f32[0] * (tr - tl) + vm.m128_f32[0] * (bl - tl)) - pos;
-                bundle.v2 = (tl + um.m128_f32[1] * (tr - tl) + vm.m128_f32[1] * (bl - tl)) - pos;
-                bundle.v3 = (tl + um.m128_f32[2] * (tr - tl) + vm.m128_f32[2] * (bl - tl)) - pos;
-                bundle.v4 = (tl + um.m128_f32[3] * (tr - tl) + vm.m128_f32[3] * (bl - tl)) - pos;
-                normalize_bundle(bundle); /* Fast SIMD normalize */
-
-                packet.rays[v * 8 + u] = bundle.v1;
-                packet.rays[v * 8 + (u + 1)] = bundle.v2;
-                packet.rays[(v + 1) * 8 + u] = bundle.v3;
-                packet.rays[(v + 1) * 8 + (u + 1)] = bundle.v4;
-            }
-        }
-
+        packet.calc_bounds();
         return packet;
     }
 
@@ -166,6 +115,9 @@ struct Camera {
 
     /* Update the camera and handle inputs. (returns forward motion delta) */
     f32 update(const f32 t);
+
+    /** @brief Look around with a mouse delta. */
+    void look(const int2& mouse_delta, const f32 dt);
 
    private:
     f32 focal_point = 0.01f;

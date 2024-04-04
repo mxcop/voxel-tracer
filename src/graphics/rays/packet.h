@@ -1,51 +1,14 @@
 #pragma once
 
-/* Coherent ray packet 4x4, cache line aligned. */
-struct alignas(64) CoherentPacket4x4 {
-    /* [du_min, du_max, dv_min, dv_max] */
-    /* Factor by which the slice grows each step. */
-    union {
-        f128 delta_slice;
-        struct {
-            f32 du_min, du_max, dv_min, dv_max;
-        };
-    };
-    /* [u_min, u_max, v_min, v_max] */
-    /* Extend of the current slice. */
-    union {
-        f128 slice;
-        struct {
-            f32 u_min, u_max, v_min, v_max;
-        };
-    };
-    /* Traversal axis. */
-    u32 k, u, v;
-    /* Distance along major axis. */
-    f32 k_t = 0;
+#include "pyramid.h"
 
-    /* Packet origin point. */
-    float3 origin;
-    /* Packet ray directions. */
-    float3 rays[4 * 4];
+struct alignas(64) RayPacket8x8 {
+    Ray rays[8 * 8];
+    Pyramid bounds;
 
-    void setup_slice(const float3& min, const float3& max, const f32 vpu);
-
-    void traverse(const float3& min, const float3& max, const f32 vpu);
-
-   private:
-    // FOR TESTING ONLY
-    void draw_slice(const f32 vpu) const;
-
-    __forceinline i32 getsign(const f32 f) const { return (i32)(((u32&)f) >> 31) * 2 - 1; }
-    f32 entry(const f32 ro, const f32 rd, const f32 min, const f32 max) const;
-};
-
-/* Coherent ray packet 8x8, cache line aligned. */
-struct alignas(64) CoherentPacket8x8 {
-    /* Packet origin point. */
-    float3 origin;
-    /* Packet ray directions. */
-    float3 rays[8 * 8];
+    void calc_bounds() {
+        bounds = Pyramid(rays[0].origin, 0, rays[0].dir, rays[7].dir, rays[56].dir);
+    }
 };
 
 /* SIMD (SSE) Ray packet structure. */

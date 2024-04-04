@@ -1,6 +1,7 @@
 #include "bvh.h"
 
 #include <utility> /* std::swap */
+#include "engine/physics/collision/sat.h"
 
 Bvh::Bvh(u32 size, Traceable** new_prims) : size(size) { build(size, new_prims); }
 
@@ -265,6 +266,75 @@ HitInfo Bvh::intersect(const Ray& ray) const {
 
     result.steps = steps;
     return result;
+}
+
+PacketHit8x8 Bvh::coherent_intersect(const RayPacket8x8& packet) const {
+    PacketHit8x8 hits;
+
+    const Node *node = &nodes[root_idx], *node_stack[64];
+    u32 steps = 0u;
+    for (u32 stack_ptr = 0;;) {
+        /* If the current node is a leaf... */
+        if (node->is_leaf()) {
+            for (u32 r = 0; r < 8 * 8; r++) {
+                /* Check if we hit any primitives */
+                for (u32 i = 0; i < node->prim_count; ++i) {
+                    const Traceable& prim = *prims[node->left_first + i];
+
+                    const HitInfo hit = prim.intersect(packet.rays[r]);
+
+                    if (hit.steps)
+                        steps += hit.steps;
+                    else
+                        steps++;
+
+                    /* Record a new closest hit */
+                    if (hit.depth < hits.hits[r].depth) {
+                        hits.hits[r] = hit;
+                    }
+                }
+            }
+
+            /* Decend down the stack */
+            if (stack_ptr == 0) break;
+            node = node_stack[--stack_ptr];
+            continue;
+        }
+
+        /* In case we're not a leaf, see if we intersect the child nodes */
+        const Node* child1 = &nodes[node->left_first];
+        const Node* child2 = &nodes[node->left_first + 1];
+
+        box_t aabb1;
+        aabb1.min = child1->aabb_min;
+        aabb1.max = child1->aabb_max;
+        f32 dist1 = box_pyramid_sat(aabb1, packet.bounds) ? 1.0f : BIG_F32;
+        box_t aabb2;
+        aabb2.min = child2->aabb_min;
+        aabb2.max = child2->aabb_max;
+        f32 dist2 = box_pyramid_sat(aabb2, packet.bounds) ? 1.0f : BIG_F32;
+        steps += 2;
+
+        /* Child to be traversed first should be the closest one */
+        if (dist1 > dist2) {
+            std::swap(dist1, dist2);
+            std::swap(child1, child2);
+        }
+
+        /* Traverse child nodes if they were intersected */
+        if (dist1 >= BIG_F32) {
+            /* Decend down the stack */
+            if (stack_ptr == 0) break;
+            node = node_stack[--stack_ptr];
+        } else {
+            node = child1;
+            if (dist2 < BIG_F32) {
+                node_stack[stack_ptr++] = child2;
+            }
+        }
+    }
+
+    return hits;
 }
 
 #if 0

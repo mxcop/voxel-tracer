@@ -151,6 +151,9 @@ using namespace Tmpl8;
 // global keystate array access
 bool IsKeyDown( const uint key );
 
+void DisableCursor();
+void EnableCursor();
+
 // timer
 struct Timer
 {
@@ -376,6 +379,7 @@ public:
 	static inline JobManager* jm = JobManager::GetJobManager();
 	Surface* screen = 0;
 	bool uiUpdated;
+	bool running = true;
 	uint end_of_base_class = 99999;
 };
 

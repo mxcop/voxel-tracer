@@ -175,6 +175,7 @@ inline float3 make_float3( const float2& a, const float& s ) { return make_float
 inline float3 make_float3( const float4& a ) { return make_float3( a.x, a.y, a.z ); }
 inline float3 make_float3( const int3& a ) { return make_float3( float( a.x ), float( a.y ), float( a.z ) ); }
 inline float3 make_float3( const uint3& a ) { return make_float3( float( a.x ), float( a.y ), float( a.z ) ); }
+inline float3 from_axis_value(const int& a, const float& f) { float3 v = 0; v[a] = f; return v; }
 inline int3 make_int3( const int& a, const int& b, const int& c ) { int3 i3; i3.x = a, i3.y = b, i3.z = c; return i3; }
 inline int3 make_int3( const int& s ) { return make_int3( s, s, s ); }
 inline int3 make_int3( const int2& a ) { return make_int3( a.x, a.y, 0 ); }
@@ -883,6 +884,19 @@ float3 TransformVector( const float3& a, const mat4& M );
 float3 TransformPosition_SSE( const __m128& a, const mat4& M );
 float3 TransformVector_SSE( const __m128& a, const mat4& M );
 
+/** @brief Rotation axes of a quaternion. */
+struct quat_axes {
+	union {
+        float3 axes[3];
+		struct {
+            float3 x, y, z;
+		};
+	};
+
+	float3& operator[](const i32 i) { return axes[i]; }
+    const float3& operator[](const i32 i) const { return axes[i]; }
+};
+
 class quat // based on https://github.com/adafruit
 {
 public:
@@ -951,6 +965,35 @@ public:
 		ret.cell[10] = 1 - 2 * x * x - 2 * y * y;
 		return ret;
 	}
+    /** @brief Extract one of the 3 axis of rotation. */
+	float3 extract_axis(const u32 axis) const {
+        if (axis == 0) {
+            return make_float3(1 - 2 * y * y - 2 * z * z, 2 * x * y + 2 * w * z,
+                               2 * x * z - 2 * w * y);
+		}
+		if (axis == 1) {
+            return make_float3(2 * x * y - 2 * w * z, 1 - 2 * x * x - 2 * z * z,
+                               2 * y * z + 2 * w * x);
+		}
+        if (axis == 2) {
+            return make_float3(2 * x * z + 2 * w * y, 2 * y * z - 2 * w * x,
+                               1 - 2 * x * x - 2 * y * y);
+        }
+	}
+	/** @brief Get the rotation axis of this quaternion. */
+    quat_axes axes() const { 
+		quat_axes axes;
+        axes.x[0] = 1 - 2 * y * y - 2 * z * z;
+        axes.y[0] = 2 * x * y - 2 * w * z;
+        axes.z[0] = 2 * x * z + 2 * w * y,
+        axes.x[1] = 2 * x * y + 2 * w * z;
+        axes.y[1] = 1 - 2 * x * x - 2 * z * z;
+        axes.z[1] = 2 * y * z - 2 * w * x;
+        axes.x[2] = 2 * x * z - 2 * w * y,
+        axes.y[2] = 2 * y * z + 2 * w * x;
+        axes.z[2] = 1 - 2 * x * x - 2 * y * y;
+        return axes;
+	}
 	float3 toEuler() const
 	{
 		float3 ret;
@@ -972,6 +1015,9 @@ public:
 		float3 qv = make_float3( x, y, z ), t = cross( qv, v ) * 2.0f;
 		return v + t * w + cross( qv, t );
 	}
+    float3 rotate_vec(const float3& v) const {
+        return rotateVector(v);
+    }
 	quat operator * ( const quat& q ) const
 	{
 		return quat(

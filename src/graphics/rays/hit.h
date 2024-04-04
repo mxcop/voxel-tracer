@@ -4,7 +4,7 @@
 struct HitInfo {
     f32 depth = BIG_F32;
     u8 material = 0;
-    float4 albedo = {};
+    float3 albedo = {};
     float3 normal = {};
     u32 steps = 0; /* For debugging! */
 
@@ -18,24 +18,6 @@ struct PacketHitInfo {
     u32 steps = 0; /* For debugging! */
 };
 
-struct alignas(64) CoherentHit4x4 {
-    f32 depth[4 * 4] = {};
-    float3 normal[4 * 4] = {};
-
-    CoherentHit4x4() {
-        for (u32 r = 0; r < 4*4; r++) {
-            depth[r] = BIG_F32;
-        }
-    }
-};
-
-struct alignas(64) CoherentHit8x8 {
-    f32 depth[8 * 8] = {};
-    float3 normal[8 * 8] = {};
-
-    CoherentHit8x8() {
-        for (u32 r = 0; r < 8 * 8; r++) {
-            depth[r] = BIG_F32;
-        }
-    }
+struct alignas(64) PacketHit8x8 {
+    HitInfo hits[8 * 8];
 };

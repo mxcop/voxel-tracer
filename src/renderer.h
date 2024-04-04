@@ -25,6 +25,7 @@ struct TraceResult {
     f32 depth = BIG_F32;
     bool reproject = true;
 
+    TraceResult() = default;
     explicit TraceResult(const HitInfo& hit)
         : albedo(hit.albedo), irradiance(0), depth(hit.depth) {}
 
@@ -35,12 +36,17 @@ struct TraceResult {
     };
 };
 
+struct TraceResult8x8 {
+    TraceResult results[8 * 8];
+};
+
 class Renderer : public TheApp {
    public:
     /** @brief Initialize the application */
     void init();
     /** @brief Trace the scene */
     TraceResult trace(Ray& ray, const u32 x, const u32 y, bool debug = false) const;
+    TraceResult8x8 trace(const RayPacket8x8& packet, const u32 x, const u32 y, bool debug = false) const;
     /** @brief Called as often as possible */
     void tick(f32 dt);
     /** @brief Called after "tick" for ImGUI rendering */
@@ -51,26 +57,24 @@ class Renderer : public TheApp {
     /* User input */
     void MouseUp(int button) {}
     void MouseDown(int button);
-    void MouseMove(int x, int y) { 
-        mousePos.x = x, mousePos.y = y;
+    void MouseMove(int x, int y) {
+        mouse_pos.x = x, mouse_pos.y = y; 
     }
     void MouseWheel(float y) {}
     void KeyUp(int key) {}
     void KeyDown(int key) {}
 
     /**
-     * @brief Reproject onto the current frame and accumulate. (with tonemapping)
-     * @return The color to display on screen for this pixel.
-     */
-    inline float4 insert_accu(const u32 x, const u32 y, const Ray& ray, const float4& c) const;
-
-    /**
      * @brief Reproject onto the current frame and accumulate. (without tonemapping)
      * @return The color to display on screen for this pixel.
      */
-    inline float4 insert_accu_raw(const u32 x, const u32 y, const Ray& ray, const float4& c) const;
+    inline float3 insert_accu(const u32 x, const u32 y, const Ray& ray, const float3& c,
+                                  const f32 d) const;
 
-    int2 mousePos;
+    bool escaped = false;
+
+    int2 mouse_pos;
+    int2 mouse_old;
     u32 frame = 0u;
 
     /* Game camera */

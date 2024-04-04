@@ -8,7 +8,7 @@ constexpr u32 MAX_STEPS = 256;
 /* Convert RGBA to u32 */
 static inline u32 merge_u8_u32(ogt_vox_rgba c) { return (c.r << 16) | (c.g << 8) | c.b; }
 
-OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vpu) : vpu(vpu) {
+OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const i32 model_id, const f32 vpu) : vpu(vpu) {
     /* Load the model file */
     FILE* fp = fopen(vox_path, "rb");
     uint32_t buffer_size = _filelength(_fileno(fp));
@@ -21,7 +21,7 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const f32 vp
     delete[] buffer; /* Cleanup */
 
     /* Ignore everything except the first model */
-    const ogt_vox_model* model = scene->models[0];
+    const ogt_vox_model* model = scene->models[model_id];
 
     /* Initialize the volume */
     grid_size = int3(model->size_y, model->size_z, model->size_x);

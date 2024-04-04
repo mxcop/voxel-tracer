@@ -43,6 +43,9 @@ bool WindowHasFocus() { return hasFocus; }
 // provide access to key state array
 bool IsKeyDown( const uint key ) { return keystate[key & 255] == 1; }
 
+void DisableCursor() { glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); }
+void EnableCursor() { glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); }
+
 // GLFW callbacks
 void InitRenderTarget( int w, int h )
 {
@@ -56,7 +59,7 @@ void ReshapeWindowCallback( GLFWwindow*, int w, int h )
 }
 void KeyEventCallback( GLFWwindow*, int key, int, int action, int )
 {
-	if (key == GLFW_KEY_ESCAPE) running = false;
+	//if (key == GLFW_KEY_ESCAPE) running = false;
 	if (action == GLFW_PRESS) { if (app) if (key >= 0) app->KeyDown( key ); keystate[key & 255] = 1; }
 	else if (action == GLFW_RELEASE) { if (app) if (key >= 0) app->KeyUp( key ); keystate[key & 255] = 0; }
 }
@@ -352,7 +355,7 @@ void main()
 			glfwSwapBuffers( window );
 			glfwPollEvents();
 		}
-		if (!running) break;
+		if (!running || !app->running) break;
 	}
 #if 0
 	// serialize

@@ -11,7 +11,7 @@ Tmpl8::Surface* db_screen = nullptr;
 f32 frame_time = 1;
 
 Ray debug_ray;
-CoherentPacket8x8 debug_packet;
+Pyramid debug_py;
 
 DisplayMode display_mode = FINAL;
 
