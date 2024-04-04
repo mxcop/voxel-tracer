@@ -47,6 +47,8 @@ static f32 entry(const f32 ro, const f32 rd, const f32 min, const f32 max) {
     return (bmin - ro) / rd;  // TODO: maybe try getting rid of division here?
 }
 
+static f32 axis_delta(const f32 axis_dir) { return fabs(1.0f / axis_dir); }
+
 static f32 safe_entry(const f32 ro, const f32 rd, const f32 min, const f32 max) {
     const bool sign = (rd < 0);
     const f32 bmin = sign ? max : min;
@@ -328,9 +330,18 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     const f32 next_br = entry(origin[k], ray_br[k], next_k, next_k);
 
     /* Entry time along major axis K (floor + 0.5 is to align k_t to the grid) */
-    f32 k_t = floor((origin[k] + ray_tl[k] * entry_tl) * vpu + 0.5f);
-    //const f32 k_o = fracf((origin[k] + ray_tl[k] * entry_tl) * vpu);
+    f32 k_t = floorf((origin[k] + ray_tl[k] * entry_tl) * vpu + 0.0001f);
+    //const f32 k_o = ((origin[k] + ray_tl[k] * entry_tl) * vpu) - k_t;
+    //f32 k_t = (origin[k] + ray_tl[k] * entry_tl) * vpu + k_sign * 0.00001f;
+    // const f32 k_o = fracf((origin[k] + ray_tl[k] * entry_tl) * vpu);
     // FIX: k_t is being aligned to the grid, but this desyncs it with our entry and exit point...
+    const f32 k_o = (k_t - origin[k] * vpu) * k_sign;
+
+    if (debug) {
+        float3 op = packet.origin;
+        op[k] = k_t * upv;
+        db::draw_line(packet.origin, op, 0xFFFF00FF);
+    }
 
     /* Corner U,V entry points */
     const f32 u_tl = (origin[u] + ray_tl[u] * entry_tl) * vpu;
@@ -379,42 +390,74 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     };
 
     /* Entry min and max U,V */
-    u_min = fminf(fminf(u_tl, u_br), fminf(u_tr, u_bl));
-    u_max = fmaxf(fmaxf(u_tl, u_br), fmaxf(u_tr, u_bl));
-    v_min = fminf(fminf(v_tl, v_br), fminf(v_tr, v_bl));
-    v_max = fmaxf(fmaxf(v_tl, v_br), fmaxf(v_tr, v_bl));
+    //u_min = fminf(fminf(u_tl, u_br), fminf(u_tr, u_bl));
+    //u_max = fmaxf(fmaxf(u_tl, u_br), fmaxf(u_tr, u_bl));
+    //v_min = fminf(fminf(v_tl, v_br), fminf(v_tr, v_bl));
+    //v_max = fmaxf(fmaxf(v_tl, v_br), fmaxf(v_tr, v_bl));
 
-    if (debug) {
-        float3 min_p, max_p;
-        min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
-        max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
+    //if (debug) {
+    //    float3 min_p, max_p;
+    //    min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
+    //    max_p[k] = k_t, max_p[u] = u_max, max_p[v] = v_max;
 
-        /* Draw floating point grid slice */
-        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
-    }
+    //    /* Draw floating point grid slice */
+    //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+    //}
 
     /* Next min and max U,V */
-    const f32 nu_min = fminf(fminf(nu_tl, nu_br), fminf(nu_tr, nu_bl));
-    const f32 nu_max = fmaxf(fmaxf(nu_tl, nu_br), fmaxf(nu_tr, nu_bl));
-    const f32 nv_min = fminf(fminf(nv_tl, nv_br), fminf(nv_tr, nv_bl));
-    const f32 nv_max = fmaxf(fmaxf(nv_tl, nv_br), fmaxf(nv_tr, nv_bl));
+    //const f32 nu_min = fminf(fminf(nu_tl, nu_br), fminf(nu_tr, nu_bl));
+    //const f32 nu_max = fmaxf(fmaxf(nu_tl, nu_br), fmaxf(nu_tr, nu_bl));
+    //const f32 nv_min = fminf(fminf(nv_tl, nv_br), fminf(nv_tr, nv_bl));
+    //const f32 nv_max = fmaxf(fmaxf(nv_tl, nv_br), fmaxf(nv_tr, nv_bl));
 
-    if (debug) {
-        float3 min_p, max_p;
-        min_p[k] = next_k * vpu, min_p[u] = nu_min, min_p[v] = nv_min;
-        max_p[k] = next_k * vpu, max_p[u] = nu_max, max_p[v] = nv_max;
+    //if (debug) {
+    //    float3 min_p, max_p;
+    //    min_p[k] = next_k * vpu, min_p[u] = nu_min, min_p[v] = nv_min;
+    //    max_p[k] = next_k * vpu, max_p[u] = nu_max, max_p[v] = nv_max;
 
-        /* Draw floating point grid slice */
-        db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
-    }
+    //    /* Draw floating point grid slice */
+    //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
+    //}
 
     /* Slice delta U,V */
-    du_min = nu_min - u_min, du_max = nu_max - u_max;
-    dv_min = nv_min - v_min, dv_max = nv_max - v_max;
+    // du_min = nu_min - u_min, du_max = nu_max - u_max;
+    // dv_min = nv_min - v_min, dv_max = nv_max - v_max;
+
+    /* Calculate the slice deltas */
+    const f32 tl_dk = axis_delta(ray_tl[k]), br_dk = axis_delta(ray_br[k]);
+    const f32 tl_du = ray_tl[u] * tl_dk, br_du = ray_br[u] * br_dk;
+    const f32 tl_dv = ray_tl[v] * tl_dk, br_dv = ray_br[v] * br_dk;
+    du_min = fminf(tl_du, br_du), du_max = fmaxf(tl_du, br_du);
+    dv_min = fminf(tl_dv, br_dv), dv_max = fmaxf(tl_dv, br_dv);
+
+    /* Point 0 */
+    const f32 u_a = origin[u] * vpu + (du_min * k_o);
+    const f32 u_b = origin[u] * vpu + (du_max * k_o);
+    const f32 v_a = origin[v] * vpu + (dv_max * k_o);
+    const f32 v_b = origin[v] * vpu + (dv_min * k_o);
+
+    /* Point 1 (adjust for k_max - 1) */
+    const f32 k_pos = -fminf(k_sign, 0) + 1;
+    const f32 u_c = origin[u] * vpu + du_min * (k_o - k_pos);
+    const f32 u_d = origin[u] * vpu + du_max * (k_o - k_pos);
+    const f32 v_c = origin[v] * vpu + dv_max * (k_o - k_pos);
+    const f32 v_d = origin[v] * vpu + dv_min * (k_o - k_pos);
+
+    /* Merge point 0 and 1 for our starting position */
+    u_min = fminf(fminf(u_a, u_b), fminf(u_c, u_d));
+    v_min = fminf(fminf(v_a, v_b), fminf(v_c, v_d));
+    u_max = fmaxf(fmaxf(u_a, u_b), fmaxf(u_c, u_d));
+    v_max = fmaxf(fmaxf(v_a, v_b), fmaxf(v_c, v_d));
 
     /* Slice entry U,V (combining the first and next slice) */
-    u_min = fminf(u_min, nu_min), u_max = fmaxf(u_max, nu_max);
-    v_min = fminf(v_min, nv_min), v_max = fmaxf(v_max, nv_max);
+    //u_min = fminf(u_min, nu_min), u_max = fmaxf(u_max, nu_max);
+    //v_min = fminf(v_min, nv_min), v_max = fmaxf(v_max, nv_max);
+
+    //u_min -= origin[u] * vpu;
+    //v_min -= origin[v] * vpu;
+    //u_max -= origin[u] * vpu;
+    //v_max -= origin[v] * vpu;
+    //slice = _mm_add_ps(slice, _mm_mul_ps(delta_slice, _mm_set_ps1(k_o)));
 
     // TODO: fix the offset due to being inside grid.
     //if (entry_tl == 0 || entry_tr == 0 || entry_bl == 0 || entry_br == 0) {
@@ -422,9 +465,9 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     //}
 
     /* Move back by 1 slice if we are moving in the negative direction */
-    if (k_sign < 0) {
-        slice = _mm_sub_ps(slice, delta_slice);
-    }
+    //if (k_sign < 0) {
+    //    slice = _mm_sub_ps(slice, delta_slice);
+    //}
 
     if (debug) {
         float3 min_p, max_p;
@@ -440,7 +483,8 @@ CoherentHit8x8 CoherentVoxelVolume::intersect(const CoherentPacket8x8& packet,
     const f32 max_t = k_max * vpu;
 
     /* Move back by 1 slice, because we first move then check! */
-    slice = _mm_sub_ps(slice, delta_slice);
+    //slice = _mm_sub_ps(slice, delta_slice);
+    // slice = _mm_sub_ps(slice, delta_slice);
 
     for (k_t; k_t >= min_t && k_t <= max_t; k_t += k_sign) {
         /* Move to the next slice */
