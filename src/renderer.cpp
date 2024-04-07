@@ -299,7 +299,7 @@ void Renderer::gui(f32 dt) {
     }
 
     // TODO: remove this
-    //trace(dev::debug_packet, 0, 0, true);
+    // trace(dev::debug_packet, 0, 0, true);
     //db::draw_aabb(0, 1, 0xFFFF0000);
     // dev::debug_packet.setup_slice(0, 1, 32);
     // scene.cvv->intersect(dev::debug_packet, true);
@@ -356,7 +356,7 @@ inline float3 Renderer::insert_accu(const u32 x, const u32 y, const Ray& ray, co
 
     /* Reproject (c.w is the depth) */
     float3 acc_color = c;
-    f32 confidence = 0.99f;
+    f32 confidence = 0.90f;
 
     const float2 prev_uv = camera.prev_pyramid.project(ray.origin + ray.dir * d);
 

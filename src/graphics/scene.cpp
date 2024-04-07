@@ -2,21 +2,21 @@
 
 Scene::Scene() {
     /* Material testing shape */
-    shapes_len = 1;
+    shapes_len = 8;
     shapes = new Traceable* [shapes_len] {};
 
-    auto cube = new OVoxelVolume(0, "assets/vox/testing/dragon.vox", 0);
+    //auto cube = new OVoxelVolume(0, "assets/vox/testing/dragon.vox", 0);
     //cube->set_rotation(quat::from_axis_angle({0, 1, 0}, 1));
-    shapes[0] = cube;
+    //shapes[0] = cube;
 
-    //for (u32 z = 0; z < 8; z++) {
-    //    for (u32 y = 0; y < 8; y++) {
-    //        for (u32 x = 0; x < 8; x++) {
-    //            shapes[z * 8 * 8 + y * 8 + x] = new OVoxelVolume(
-    //                {x * 4.0f, y * 4.0f, z * 4.0f}, "assets/vox/testing/cube32.vox", 0);
-    //        }
-    //    }
-    //}
+    for (u32 z = 0; z < 2; z++) {
+        for (u32 y = 0; y < 2; y++) {
+            for (u32 x = 0; x < 2; x++) {
+                shapes[z * 2 * 2 + y * 2 + x] = new OVoxelVolume(
+                    {x * 4.0f, y * 4.0f, z * 4.0f}, "assets/vox/testing/dragon.vox", 0);
+            }
+        }
+    }
 
     //const char* robot_m = "assets/vox/small-robot-walker.vox";
     /* Head & body */

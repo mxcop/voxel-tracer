@@ -515,6 +515,19 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
     const f32 min_t = k_min * vpu;
     const f32 max_t = k_max * vpu;
 
+    RayPacket8x8 rays;
+    if (k_t >= min_t && k_t <= max_t) {
+        rays = RayPacket8x8();
+        rays.bounds = packet.bounds;
+
+        const float3 o = origin;
+        for (u32 r = 0; r < 8 * 8; r++) {
+            const float3 rd = TransformVector_SSE(packet.rays[r].d, bb.imodel);
+            const Ray ray = Ray(o, rd);
+            rays.rays[r] = ray;
+        }
+    }
+
     for (k_t; k_t >= min_t && k_t <= max_t; k_t += k_sign) {
         /* Move to the next slice */
         slice = _mm_add_ps(slice, delta_slice);
@@ -582,9 +595,8 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
                     /* Find which rays intersect this voxel */
                     const float3 grid_o = origin * vpu;
                     for (u32 r = 0; r < 8 * 8; r++) {
-                        // TODO: maybe don't do this transform every time?
-                        const float3 rd = TransformVector(packet.rays[r].dir, bb.imodel);
-                        const float3 ird = 1.0f / rd;
+                        const float3 rd = rays.rays[r].dir;
+                        const float3 ird = rays.rays[r].r_dir;
 
                         /* Entry point */
                         const f32 entry_k = k_t - fminf(k_sign, 0.0f);
@@ -600,7 +612,10 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
                         //}
 
                         /* DDA */
-                        const int3 step = make_int3(-getsign(rd.x), -getsign(rd.y), -getsign(rd.z));
+                        const int3 step =
+                            int3(rays.rays[r].sign_dir.x, rays.rays[r].sign_dir.y,
+                                 rays.rays[r].sign_dir.z);  // make_int3(-getsign(rd.x),
+                                                    // -getsign(rd.y), -getsign(rd.z));
                         const float3 pos_step = fmaxf(step, 0);
                         const float3 delta = fabs(ird);
                         float3 tmax = ((float3(entry_c) - entry_p) + pos_step) * ird;
