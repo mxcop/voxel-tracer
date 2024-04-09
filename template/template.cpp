@@ -145,10 +145,10 @@ void main()
 	// initialize application
 	InitRenderTarget( WIN_WIDTH, WIN_HEIGHT );
 	Surface* screen = new Surface( WIN_WIDTH, WIN_HEIGHT );
-    Renderer* r = new Renderer();
-    app = r;
+    Game* g = new Game();
+    app = g;
 #ifdef DEV
-    dev::renderer = r;
+    dev::renderer = g->renderer;
 #endif
 #if 0
 	// deserizalize

@@ -136,7 +136,8 @@ inline bool box_sat(const box_t& box_a, const box_t& box_b) {
 /**
  * @brief Find if there is a separating plane between two sets of corners.
  */
-inline bool separation(const corners& corners_a, const Pyramid& pyramid, const float3& n, bool debug = false) {
+inline bool separation(const corners& corners_a, const Pyramid& pyramid, const float3& n,
+                       bool debug = false) {
     /* Get min and max projection of A and B onto the normal */
     f32 a_min, a_max, b_min, b_max;
     projected_minmax(corners_a, n, a_min, a_max);
@@ -188,24 +189,26 @@ inline f32 box_pyramid_sat(const box_t& box, const Pyramid& pyramid) {
         }
     }
 
-    /* Check cross products (18 axes) */
-    //for (u32 an = 0; an < 3; ++an) {
-    //    /* Get a rotated normal */
-    //    const float3 normal_a = rot_a[an];
+/* Check cross products (18 axes) */
+#if ACCURATE_PYRAMID_TRACING
+    for (u32 an = 0; an < 3; ++an) {
+        /* Get a rotated normal */
+        const float3 normal_a = rot_a[an];
 
-    //    for (u32 bn = 0; bn < 6; ++bn) {
-    //        /* Get a rotated normal */
-    //        const float3 normal_b = pyramid.rays[bn];
+        for (u32 bn = 0; bn < 6; ++bn) {
+            /* Get a rotated normal */
+            const float3 normal_b = pyramid.rays[bn];
 
-    //        /* Cross projection normal */
-    //        const float3 normal = normalize(cross(normal_b, normal_a));
+            /* Cross projection normal */
+            const float3 normal = normalize(cross(normal_b, normal_a));
 
-    //        /* Check for separation */
-    //        if (separation(corners_a, pyramid, normal)) {
-    //            return BIG_F32; /* Separating plane found! */
-    //        }
-    //    }
-    //}
+            /* Check for separation */
+            if (separation(corners_a, pyramid, normal)) {
+                return BIG_F32; /* Separating plane found! */
+            }
+        }
+    }
+#endif
 
     return projected_dist(corners_a, pyramid);
 }

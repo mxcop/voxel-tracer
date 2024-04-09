@@ -1,6 +1,7 @@
 #pragma once
 
 #include "primitives/cvv.h"
+#include "primitives/basic/capsule.h"
 
 class Scene {
     /* Bounding volume hierarchy */
@@ -14,6 +15,7 @@ class Scene {
    public:
     /* Lighting */
     vector<SphereLight> lights;
+    Capsule laser_segments[8];
 
     // TEMP: testing coherent traversal
     CoherentVoxelVolume* cvv = nullptr;

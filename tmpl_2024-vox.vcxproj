@@ -184,6 +184,8 @@
     <ClCompile Include="src\engine\physics\collision\collision.cpp" />
     <ClCompile Include="src\engine\physics\collision\gjk.cpp" />
     <ClCompile Include="src\engine\physics\world.cpp" />
+    <ClCompile Include="src\game\game.cpp" />
+    <ClCompile Include="src\game\player.cpp" />
     <ClCompile Include="src\game\robot-arm.cpp" />
     <ClCompile Include="src\graphics\bvh.cpp" />
     <ClCompile Include="src\graphics\camera.cpp" />
@@ -192,6 +194,7 @@
     <ClCompile Include="src\graphics\noise\blue.cpp" />
     <ClCompile Include="src\graphics\noise\sampler.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\aabb.cpp" />
+    <ClCompile Include="src\graphics\primitives\basic\capsule.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\sphere.cpp" />
     <ClCompile Include="src\graphics\primitives\brick-volume.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\obb.cpp" />
@@ -212,7 +215,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="template\tmpl8math.cpp" />
-    <ClCompile Include="src\renderer.cpp" />
+    <ClCompile Include="src\graphics\renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lib\imgui\imconfig.h" />
@@ -238,6 +241,8 @@
     <ClInclude Include="src\engine\physics\object.h" />
     <ClInclude Include="src\engine\physics\transform.h" />
     <ClInclude Include="src\engine\physics\world.h" />
+    <ClInclude Include="src\game\game.h" />
+    <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\game\robot-arm.h" />
     <ClInclude Include="src\graphics\bvh.h" />
     <ClInclude Include="src\graphics\camera.h" />
@@ -249,6 +254,7 @@
     <ClInclude Include="src\graphics\noise\gaussian.h" />
     <ClInclude Include="src\graphics\noise\sampler.h" />
     <ClInclude Include="src\graphics\primitives\basic\aabb.h" />
+    <ClInclude Include="src\graphics\primitives\basic\capsule.h" />
     <ClInclude Include="src\graphics\primitives\basic\sphere.h" />
     <ClInclude Include="src\graphics\primitives\brick-volume.h" />
     <ClInclude Include="src\graphics\primitives\basic\obb.h" />
@@ -273,7 +279,7 @@
     <ClInclude Include="template\precomp.h" />
     <ClInclude Include="template\surface.h" />
     <ClInclude Include="template\tmpl8math.h" />
-    <ClInclude Include="src\renderer.h" />
+    <ClInclude Include="src\graphics\renderer.h" />
     <ClInclude Include="template\types.h" />
   </ItemGroup>
   <ItemGroup>

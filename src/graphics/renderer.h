@@ -40,29 +40,20 @@ struct TraceResult8x8 {
     TraceResult results[8 * 8];
 };
 
-class Renderer : public TheApp {
+class Renderer {
    public:
     /** @brief Initialize the application */
     void init();
     /** @brief Trace the scene */
     TraceResult trace(Ray& ray, const u32 x, const u32 y, bool debug = false) const;
     TraceResult8x8 trace(const RayPacket8x8& packet, const u32 x, const u32 y, bool debug = false) const;
+    vector<float3> path(const Ray& ray) const;
     /** @brief Called as often as possible */
-    void tick(f32 dt);
+    void tick(Surface* screen, const f32 dt);
     /** @brief Called after "tick" for ImGUI rendering */
-    void gui(f32 dt);
+    void gui(bool& running, const f32 dt);
     /** @brief Called before the application closes */
     void shutdown();
-
-    /* User input */
-    void MouseUp(int button) {}
-    void MouseDown(int button);
-    void MouseMove(int x, int y) {
-        mouse_pos.x = x, mouse_pos.y = y; 
-    }
-    void MouseWheel(float y) {}
-    void KeyUp(int key) {}
-    void KeyDown(int key) {}
 
     /**
      * @brief Reproject onto the current frame and accumulate. (without tonemapping)
@@ -71,10 +62,6 @@ class Renderer : public TheApp {
     inline float3 insert_accu(const u32 x, const u32 y, const Ray& ray, const float3& c,
                                   const f32 d) const;
 
-    bool escaped = false;
-
-    int2 mouse_pos;
-    int2 mouse_old;
     u32 frame = 0u;
 
     /* Game camera */
@@ -99,7 +86,7 @@ class Renderer : public TheApp {
 #endif
 
     /* Physics testing */
-    PhyWorld world;
-    PhyObject* test_obj = nullptr;
-    PhyObject* test_plane_obj = nullptr;
+    //PhyWorld world;
+    //PhyObject* test_obj = nullptr;
+    //PhyObject* test_plane_obj = nullptr;
 };

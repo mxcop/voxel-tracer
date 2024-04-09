@@ -570,52 +570,91 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
         if (u_max < 0.0f || v_max < 0.0f) continue;
         if (u_min >= grid_size[u] || v_min >= grid_size[v]) continue;
 
-        /* Iterate over cells in slice */
+        bool is_empty = true;
+        bool is_saturated = true;
         for (i32 y = y_min; y <= y_max; y++) {
             for (i32 x = x_min; x <= x_max; x++) {
                 int3 i; /* Cell coordinate */
                 i[k] = k_t, i[u] = x, i[v] = y;
 
-                // if (debug) {
-                //     float3 min_p = i, max_p = i + 1;
+                if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
+                    is_empty = false;
+                } else {
+                    is_saturated = false;
+                }
+            }
+        }
 
-                //    /* Draw floating point grid slice */
-                //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF0000);
-                //}
+        /* Skip empty slice */
+        if (is_empty) continue;
+
+        // TODO: this doesn't really work...
+        /* Faster logic for saturated slice */
+        //if (is_saturated) {
+        //    const float3 grid_o = origin * vpu;
+        //    bool done = true;
+        //    for (u32 r = 0; r < 8 * 8; r++) {
+        //        const float3 rd = rays.rays[r].dir;
+        //        const float3 ird = rays.rays[r].r_dir;
+
+        //        /* Entry point */
+        //        const f32 entry_k = k_t - fminf(k_sign, 0.0f);
+        //        const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.001f;
+        //        if (entry_t * upv > hit.hits[r].depth) continue;
+
+        //        float3 entry_p = grid_o + rd * entry_t;
+        //        int3 i = floori(entry_p);
+
+        //        if (i[u] < x_min || i[u] > x_max || i[v] < y_min || i[v] > y_max) {
+        //            done = false;
+        //            continue;
+        //        }
+
+        //        hit.hits[r].depth = entry_t * upv;
+        //        /* Normal */
+        //        hit.hits[r].normal = 0, hit.hits[r].normal[k] = -rays.rays[r].sign_dir[k];
+        //        hit.hits[r].material =
+        //            voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x];
+        //        hit.hits[r].albedo = RGB8_to_RGBF32(palette[hit.hits[r].material]);
+        //    }
+
+        //    /* Early exit if all rays are done */
+        //    if (done) {
+        //        break;
+        //    }
+
+        //    continue;
+        //}
+
+            /* Iterate over cells in slice */
+#if 1
+        for (i32 y = y_min; y <= y_max; y++) {
+            for (i32 x = x_min; x <= x_max;
+                 x++) {  // TODO: VERY LARGE VALUES HERE!!! CAUSING PROBLEMS!
+                int3 i;  /* Cell coordinate */
+                i[k] = k_t, i[u] = x, i[v] = y;
 
                 /* If the cell is a solid voxel */
                 if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
-                    // if (debug) {
-                    //     float3 min_p = i, max_p = i + 1;
-
-                    //    /* Draw floating point grid slice */
-                    //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF00FF);
-                    //}
-
                     /* Find which rays intersect this voxel */
                     const float3 grid_o = origin * vpu;
+                    u32 inactive_rays = 0;
                     for (u32 r = 0; r < 8 * 8; r++) {
                         const float3 rd = rays.rays[r].dir;
                         const float3 ird = rays.rays[r].r_dir;
-
+                        
                         /* Entry point */
                         const f32 entry_k = k_t - fminf(k_sign, 0.0f);
                         const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.001f;
+                        if (entry_t * upv > hit.hits[r].depth) continue;
+
                         float3 entry_p = grid_o + rd * entry_t;
                         int3 entry_c = floori(entry_p);
-
-                        // if (debug) {
-                        //     float3 min_p = floorf(entry_p), max_p = min_p + 1;
-
-                        //    /* Draw floating point grid slice */
-                        //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF0000);
-                        //}
 
                         /* DDA */
                         const int3 step =
                             int3(rays.rays[r].sign_dir.x, rays.rays[r].sign_dir.y,
-                                 rays.rays[r].sign_dir.z);  // make_int3(-getsign(rd.x),
-                                                    // -getsign(rd.y), -getsign(rd.z));
+                                 rays.rays[r].sign_dir.z);
                         const float3 pos_step = fmaxf(step, 0);
                         const float3 delta = fabs(ird);
                         float3 tmax = ((float3(entry_c) - entry_p) + pos_step) * ird;
@@ -623,18 +662,20 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
                         f32 inner_t = 0;
 
                         /* Up to 5 DDA steps */
-                        for (u32 q = 0; q < 5; q++) {
+                        for (u32 q = 0; q < 3; q++) {
                             /* Stop if depth is higher or equal to previously found depth */
-                            if (hit.hits[r].depth <= (entry_t + inner_t) * upv) break;
+                            if (hit.hits[r].depth <= (entry_t + inner_t) * upv) {
+                                break;
+                            }
 
                             /* Hit! */
                             if (entry_c[u] == i[u] && entry_c[v] == i[v]) {
                                 hit.hits[r].depth = (entry_t + inner_t) * upv;
                                 /* Normal */
                                 hit.hits[r].normal = 0, hit.hits[r].normal[axis] = -step[axis];
-                                hit.hits[r].albedo =
-                                    RGB8_to_RGBF32(palette[voxels[i.z * grid_size.y * grid_size.x +
-                                                                  i.y * grid_size.x + i.x]]);
+                                hit.hits[r].material = voxels[i.z * grid_size.y * grid_size.x +
+                                                              i.y * grid_size.x + i.x];
+                                hit.hits[r].albedo = RGB8_to_RGBF32(palette[hit.hits[r].material]);
                                 break;
                             }
 
@@ -662,24 +703,118 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
                                 }
                             }
                         }
+
+                        //if (hit.hits[r].depth != BIG_F32) {
+                        //    inactive_rays++;
+                        //}
                     }
+
+                    /* Early exit if all rays are done */
+                    //if (inactive_rays == (8 * 8)) {
+                    //    goto done;
+                    //}
                 }
             }
         }
 
-        u32 inactive_rays = 0;
+         u32 inactive_rays = 0;
+         for (u32 r = 0; r < 8 * 8; r++) {
+             /* Only check active rays */
+             if (hit.hits[r].depth != BIG_F32) {
+                 inactive_rays++;
+             }
+         }
+
+        /* Early exit if all rays are done */
+         if (inactive_rays == (8 * 8)) {
+             break;
+         }
+#else
+        const float3 grid_o = origin * vpu;
         for (u32 r = 0; r < 8 * 8; r++) {
-            /* Only check active rays */
-            if (hit.hits[r].depth != BIG_F32) {
-                inactive_rays++;
+            const float3 rd = rays.rays[r].dir;
+            const float3 ird = rays.rays[r].r_dir;
+
+            /* Entry point */
+            const f32 entry_k = k_t - fminf(k_sign, 0.0f);
+            const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.001f;
+            float3 entry_p = grid_o + rd * entry_t;
+            int3 entry_c = floori(entry_p);
+
+            // if (debug) {
+            //     float3 min_p = floorf(entry_p), max_p = min_p + 1;
+
+            //    /* Draw floating point grid slice */
+            //    db::draw_aabb(min_p * upv, max_p * upv, 0xFFFF0000);
+            //}
+
+            /* DDA */
+            const int3 step = int3(rays.rays[r].sign_dir.x, rays.rays[r].sign_dir.y,
+                                   rays.rays[r].sign_dir.z);  // make_int3(-getsign(rd.x),
+                                                              // -getsign(rd.y), -getsign(rd.z));
+            const float3 pos_step = fmaxf(step, 0);
+            const float3 delta = fabs(ird);
+            float3 tmax = ((float3(entry_c) - entry_p) + pos_step) * ird;
+            i32 axis = k;
+            f32 inner_t = 0;
+
+            /* Up to 5 DDA steps */
+            for (u32 q = 0; q < 3; q++) {
+                /* Stop if depth is higher or equal to previously found depth */
+                if (hit.hits[r].depth <= (entry_t + inner_t) * upv) {
+                    inactive_rays++;
+                    break;
+                }
+
+                /* Hit! */
+                if (entry_c[u] == i[u] && entry_c[v] == i[v]) {
+                    hit.hits[r].depth = (entry_t + inner_t) * upv;
+                    /* Normal */
+                    hit.hits[r].normal = 0, hit.hits[r].normal[axis] = -step[axis];
+                    hit.hits[r].material =
+                        voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x];
+                    hit.hits[r].albedo = RGB8_to_RGBF32(palette[hit.hits[r].material]);
+                    break;
+                }
+
+                /* Amanatides & Woo */
+                /* <http://www.cse.yorku.ca/~amana/research/grid.pdf> */
+                if (tmax[u] < tmax[v]) {
+                    if (tmax[u] < tmax[k]) {
+                        entry_c[u] += step[u];
+                        inner_t = tmax[u];
+                        tmax[u] += delta[u];
+                        axis = u;
+                    } else {
+                        axis = k;
+                        break;
+                    }
+                } else {
+                    if (tmax[v] < tmax[k]) {
+                        entry_c[v] += step[v];
+                        inner_t = tmax[v];
+                        tmax[v] += delta[v];
+                        axis = v;
+                    } else {
+                        axis = k;
+                        break;
+                    }
+                }
             }
+
+            // if (hit.hits[r].depth != BIG_F32) {
+            //     inactive_rays++;
+            // }
         }
 
         /* Early exit if all rays are done */
         if (inactive_rays == (8 * 8)) {
-            break;
+            goto done;
         }
+#endif
     }
+
+done:
 
     /* Finalize the normals */
     for (u32 r = 0; r < 8 * 8; r++) {

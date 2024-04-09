@@ -4,8 +4,8 @@
 
 /* Settings */
 #if 1
-constexpr u32 WIN_WIDTH = 1280;
-constexpr u32 WIN_HEIGHT = 720;
+constexpr u32 WIN_WIDTH = 854;  // 1280;
+constexpr u32 WIN_HEIGHT = 480;  // 720;
 #elif 0
 constexpr u32 WIN_WIDTH = 1920;
 constexpr u32 WIN_HEIGHT = 1080;
@@ -24,7 +24,10 @@ constexpr f32 VOXEL = 1.0f / 20.0f;
 //#define PROFILING
 
 /* Use packet tracing for primary rays */
-#define PACKET_TRACE 1
+#define PACKET_TRACE 0
+
+/* Use more accurate pyramid tracing */
+#define ACCURATE_PYRAMID_TRACING 1
 
 /* Inline functions */
 static inline f32 _min(const f32 a, const f32 b) { return a < b ? a : b; };

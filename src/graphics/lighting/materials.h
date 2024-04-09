@@ -24,6 +24,11 @@ void eval_material(MatEval& eval, const Ray& ray, const HitInfo& hit,
                      const Scene& scene, const NoiseSampler& noise);
 
 /**
+ * @brief Find the next ray along the path through the scene.
+ */
+bool next_path_ray(Ray& ray, const HitInfo& hit);
+
+/**
  * @brief Evaluate the irradiance for a given point and normal in the scene.
  */
 float3 diffuse_light(const float3& p, const float3& n, const Scene& scene, const NoiseSampler& noise);

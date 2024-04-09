@@ -367,8 +367,8 @@ class TheApp
 {
 public:
 	virtual void init() { /* defined empty so we can omit it from the renderer */ }
-	virtual void tick( f32 dt ) = 0;
-	virtual void gui( f32 dt ) { uiUpdated = false; }
+	virtual void tick( const f32 dt ) = 0;
+	virtual void gui( const f32 dt ) { uiUpdated = false; }
 	virtual void shutdown() { /* defined empty so we can omit it from the renderer */ }
 	virtual void MouseUp( int button ) { /* defined empty so we can omit it from the renderer */ }
 	virtual void MouseDown( int button ) { /* defined empty so we can omit it from the renderer */ }
@@ -390,6 +390,6 @@ public:
 	void Tick() {}
 };
 
-#include "renderer.h"
+#include "game/game.h"
 
 // EOF

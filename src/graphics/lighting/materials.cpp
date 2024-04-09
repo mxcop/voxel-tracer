@@ -4,6 +4,8 @@
 
 #include "dev/debug.h"
 
+void eval_mirror(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& scene,
+                 const NoiseSampler& noise);
 void eval_glass(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& scene,
                 const NoiseSampler& noise);
 
@@ -24,11 +26,35 @@ void eval_material(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scen
         case MaterialRow::GLASS:
             eval_glass(eval, ray, hit, scene, noise);
             break;
+        case MaterialRow::MIRROR:
+            eval_mirror(eval, ray, hit, scene, noise);
+            break;
         default: /* Diffuse */
             eval.albedo = hit.albedo;
             eval.irradiance = diffuse_light(i, hit.normal, scene, noise);
             if (ray.debug) db::draw_normal(i, hit.normal, 0xFF0000FF);
             break;
+    }
+}
+
+bool next_path_ray(Ray& ray, const HitInfo& hit) {
+    /* Intersection point */
+    const float3 i = ray.intersection(hit);
+
+    /* Get the hit material row */
+    const MaterialRow material = (MaterialRow)floor((hit.material - 1) / 8.0f);
+
+    MatEval eval;
+    switch (material) {
+        case MaterialRow::GLASS:
+            ray.medium_id = hit.material;
+            return true;
+        case MaterialRow::MIRROR:
+            const float3 reflect_dir = reflect(ray.dir, hit.normal);
+            ray = Ray(ray.intersection(hit), reflect_dir);
+            return true;
+        default: /* Diffuse */
+            return false;
     }
 }
 
@@ -51,6 +77,30 @@ f32 fresnel_reflect(const f32 n1, const f32 n2, const float3& n, const float3& i
 
     /* Lerp from f0 to f90 */
     return f0 + f90 * ret;
+}
+
+/**
+ * @brief Evaluate a mirror material.
+ */
+void eval_mirror(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& scene,
+    const NoiseSampler& noise) {
+    eval.bounces++;
+
+    const float3 reflect_dir = reflect(ray.dir, hit.normal);
+    Ray reflect_ray = Ray(ray.intersection(hit), reflect_dir);
+
+    /* Find the next hit */
+    const HitInfo reflect_hit = scene.intersect(reflect_ray);
+
+    if (reflect_hit.no_hit()) {
+        eval.albedo = reflect_hit.albedo * hit.albedo; /* Absorbtion */
+        eval.irradiance = 1;
+        return;
+    }
+
+    /* Evaluate the hit material */
+    eval_material(eval, reflect_ray, reflect_hit, scene, noise);
+    eval.albedo *= hit.albedo; /* Absorbtion */
 }
 
 /**

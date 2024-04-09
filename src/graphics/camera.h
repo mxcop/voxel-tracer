@@ -22,6 +22,12 @@ struct Camera {
         pyramid = prev_pyramid = Pyramid(pos, normalize(target - pos), tl, tr, bl);
     }
 
+    void set_rot(quat& rot) {
+        /* Update the camera state */
+        const float3 ahead = normalize(rot.rotate_vec({0, 0, -1}));
+        target = pos + ahead;
+    }
+
     /* Get a new primary ray from an X and Y pixel coordinate. */
     inline Ray get_primary_ray(const f32 x, const f32 y) const {
         /* UV coordinates */
@@ -113,8 +119,10 @@ struct Camera {
         return RayPacket128(ro, rd);
     }
 
+    void tick();
+
     /* Update the camera and handle inputs. (returns forward motion delta) */
-    f32 update(const f32 t);
+    f32 freecam(const f32 t);
 
     /** @brief Look around with a mouse delta. */
     void look(const int2& mouse_delta, const f32 dt);

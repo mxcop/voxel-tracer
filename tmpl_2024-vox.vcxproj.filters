@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="src\renderer.cpp" />
+    <ClCompile Include="src\graphics\renderer.cpp" />
     <ClCompile Include="template\opencl.cpp">
       <Filter>template</Filter>
     </ClCompile>
@@ -60,9 +60,14 @@
     <ClCompile Include="src\graphics\lighting\materials.cpp" />
     <ClCompile Include="src\graphics\scene.cpp" />
     <ClCompile Include="src\graphics\noise\sampler.cpp" />
+    <ClCompile Include="src\graphics\primitives\cvv.cpp" />
+    <ClCompile Include="src\graphics\rays\packet.cpp" />
+    <ClCompile Include="src\game\game.cpp" />
+    <ClCompile Include="src\game\player.cpp" />
+    <ClCompile Include="src\graphics\primitives\basic\capsule.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\renderer.h" />
+    <ClInclude Include="src\graphics\renderer.h" />
     <ClInclude Include="template\common.h">
       <Filter>template</Filter>
     </ClInclude>
@@ -149,6 +154,10 @@
     <ClInclude Include="src\graphics\scene.h" />
     <ClInclude Include="src\graphics\noise\sampler.h" />
     <ClInclude Include="src\engine\physics\collision\sat.h" />
+    <ClInclude Include="src\graphics\primitives\cvv.h" />
+    <ClInclude Include="src\game\game.h" />
+    <ClInclude Include="src\game\player.h" />
+    <ClInclude Include="src\graphics\primitives\basic\capsule.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

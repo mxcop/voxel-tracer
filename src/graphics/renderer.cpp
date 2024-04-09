@@ -1,3 +1,5 @@
+#include "renderer.h"
+
 #include "graphics/lighting/sample.h"
 #include "graphics/rays/frustum.h"
 #include "graphics/primitives/basic/sphere.h"
@@ -45,9 +47,6 @@ void Renderer::init() {
 
     /* Load the blue noise sampler */
     bnoise = new BlueNoise();
-
-    DisableCursor();
-    mouse_old = mouse_pos;
 }
 
 /**
@@ -114,10 +113,47 @@ TraceResult8x8 Renderer::trace(const RayPacket8x8& packet, const u32 x, const u3
     return results;
 }
 
+vector<float3> Renderer::path(const Ray& ray) const { 
+    vector<float3> path;
+    path.push_back(ray.origin);
+
+    /* Intersect the scene */
+    const HitInfo hit = scene.intersect(ray);
+
+    /* Return if we didn't hit a surface (result already has sky albedo) */
+    if (hit.no_hit()) {
+        path.push_back(ray.origin + ray.dir * 1000.0f);
+        return path;
+    }
+
+    path.push_back(ray.intersection(hit));
+
+    Ray next_ray = ray;
+    HitInfo next_hit = hit;
+    for (u32 i = 0; i < 8; i++) {
+        if (next_path_ray(next_ray, next_hit)) {
+            /* Intersect the scene */
+            next_hit = scene.intersect(next_ray);
+
+            /* Return if we didn't hit a surface (result already has sky albedo) */
+            if (next_hit.no_hit()) {
+                path.push_back(next_ray.origin + next_ray.dir * 1000.0f);
+                return path;
+            }
+
+            path.push_back(next_ray.intersection(next_hit));
+        } else {
+            return path;
+        }
+    }
+
+    return path;
+}
+
 /**
  * @brief Called every frame.
  */
-void Renderer::tick(f32 dt) {
+void Renderer::tick(Surface* screen, const f32 dt) {
     frame++;
     if (frame > 120) frame = 0;
     Timer t;
@@ -181,33 +217,7 @@ void Renderer::tick(f32 dt) {
             screen->pixels[x + y * WIN_WIDTH] = RGBF32_to_RGB8(&c);
         }
     }
-
-    //for (i32 y = 0; y < WIN_HEIGHT; y += 8) {
-    //    for (i32 x = 0; x < WIN_WIDTH; x += 8) {
-    //        const CoherentPacket8x8 packet = camera.get_coherent_packet8(x, y);
-    //        const CoherentHit8x8 hits = scene.cvv->intersect(packet);
-
-    //        for (u32 v = 0; v < 8; v++) {
-    //            for (u32 u = 0; u < 8; u++) {
-    //                const i32 id = v * 8 + u;
-    //                const i32 sid = (x + u) + (y + v) * WIN_WIDTH;
-
-    //                const float4 normal = hits.normal[id];
-    //                const float4 c = (normal + 1.0f) * 0.5f;
-                    // const float4 c = hits.depth[id] / 64.0f;
-
-    //                screen->pixels[sid] = RGBF32_to_RGB8(&c);
-    //            }
-    //        }
-    //    }
-    //}
 #endif
-
-    // dev::debug_py.db_draw();
-    // box_pyramid_sat(test_box, dev::debug_py);
-    // if (box_pyramid_sat(test_box, dev::debug_py)) {
-    //
-    // }
 
 #if DENOISE
     /* Blur */
@@ -223,14 +233,6 @@ void Renderer::tick(f32 dt) {
     }
 #endif
 
-    /* TESTING */
-    // box_t test_box;
-    // test_box.min = 0, test_box.max = 1;
-    // if (box_pyramid_sat(test_box, camera.pyramid))
-    //     db::draw_aabb(0, 1, 0xFF00FF00);
-    // else
-    //     db::draw_aabb(0, 1, 0xFFFF0000);
-
     /* Swap the accumulator and the previous frame pointers */
     /* Faster than copying everything from the accu to the prev */
     float4* temp = accu;
@@ -240,64 +242,9 @@ void Renderer::tick(f32 dt) {
 #ifdef DEV
     dev::frame_time = t.elapsed();
 #endif
-
-    /* Camera movement */
-    if (not escaped) {
-        const int2 delta = mouse_pos - mouse_old;
-        mouse_old = mouse_pos;
-        camera.look(delta, dt);
-    }
-
-    /* Update the camera */
-    depth_delta = camera.update(dt);
 }
 
-void Renderer::gui(f32 dt) {
-    /* Development GUI */
-    devgui_stats(dt);
-    devgui_control();
-
-#ifdef DEV
-    /* Fast mode switch */
-    static bool f_down = false;
-    if (IsKeyDown(GLFW_KEY_F) && f_down == false) {
-        if (dev::display_mode == dev::DM::FINAL) {
-            dev::display_mode = dev::DM::ALBEDO;
-        } else {
-            dev::display_mode = dev::DM::FINAL;
-        }
-        f_down = true;
-    }
-    if (!IsKeyDown(GLFW_KEY_F) && f_down == true) {
-        f_down = false;
-    }
-
-    /* Dev gui switch */
-    static bool tilde_down = false;
-    if (IsKeyDown(GLFW_KEY_GRAVE_ACCENT) && !tilde_down) {
-        dev::hide_devgui = !dev::hide_devgui;
-        tilde_down = true;
-    }
-    if (!IsKeyDown(GLFW_KEY_GRAVE_ACCENT) && tilde_down) {
-        tilde_down = false;
-    }
-#endif
-
-    /* Escape logic */
-    static bool escape_down = false;
-    if (IsKeyDown(GLFW_KEY_ESCAPE) && !escape_down) {
-        if (escaped) {
-            running = false;
-        } else {
-            escaped = true;
-            EnableCursor();
-        }
-        escape_down = true;
-    }
-    if (!IsKeyDown(GLFW_KEY_ESCAPE) && escape_down) {
-        escape_down = false;
-    }
-
+void Renderer::gui(bool& running, const f32 dt) {
     // TODO: remove this
     // trace(dev::debug_packet, 0, 0, true);
     //db::draw_aabb(0, 1, 0xFFFF0000);
@@ -315,35 +262,6 @@ void Renderer::shutdown() {
     delete bnoise;
 }
 
-void Renderer::MouseDown(int button) {
-#ifdef DEV
-    /* Don't listen to mouse if it's over ImGui windows */
-    if (ImGui::GetIO().WantCaptureMouse) return;
-#endif
-
-    /* Escape logic */
-    if (escaped) {
-        if (button == 0) {
-            const Ray ray = camera.get_primary_ray(mouse_pos.x, mouse_pos.y);
-            dev::debug_ray = ray;
-            dev::debug_ray.debug = true;
-
-            const int2 mp = floori(float2(mouse_pos) / 16.0f) * 16;
-            const Ray ray_tl = camera.get_primary_ray(mp.x, mp.y);
-            const Ray ray_tr = camera.get_primary_ray(mp.x + 16, mp.y);
-            const Ray ray_bl = camera.get_primary_ray(mp.x, mp.y + 16);
-            dev::debug_py = Pyramid(camera.pos, normalize(camera.target - camera.pos), ray_tl.dir,
-                                    ray_tr.dir, ray_bl.dir);
-
-            dev::debug_packet = camera.get_packet8x8(mouse_pos.x, mouse_pos.y);
-        }
-
-        mouse_old = mouse_pos, escaped = false;
-        DisableCursor();
-        return;
-    }
-}
-
 /**
  * @brief Reproject onto the current frame and accumulate. (without tonemapping)
  * @return The color to display on screen for this pixel.
@@ -356,7 +274,7 @@ inline float3 Renderer::insert_accu(const u32 x, const u32 y, const Ray& ray, co
 
     /* Reproject (c.w is the depth) */
     float3 acc_color = c;
-    f32 confidence = 0.90f;
+    f32 confidence = 0.95f;
 
     const float2 prev_uv = camera.prev_pyramid.project(ray.origin + ray.dir * d);
 

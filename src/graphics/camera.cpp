@@ -1,6 +1,21 @@
 #include "camera.h"
 
-f32 Camera::update(const f32 t) {
+void Camera::tick() {
+    /* Save the current view pyramid */
+    prev_pyramid = pyramid;
+
+    /* Update the camera state */
+    const float3 ahead = normalize(target - pos);
+    const float3 right = normalize(cross(UP, ahead));
+    const float3 up = normalize(cross(ahead, right));
+    tl = pos + 2.0f * ahead - ASPECT_RATIO * right + up;
+    tr = pos + 2.0f * ahead + ASPECT_RATIO * right + up;
+    bl = pos + 2.0f * ahead - ASPECT_RATIO * right - up;
+
+    pyramid = Pyramid(pos, ahead, tl - pos, tr - pos, bl - pos);
+}
+
+f32 Camera::freecam(const f32 t) {
     if (not WindowHasFocus()) return false;
     f32 speed = 1.5f * t;
 
@@ -8,9 +23,6 @@ f32 Camera::update(const f32 t) {
     float3 ahead = normalize(target - pos);
     float3 right = normalize(cross(UP, ahead));
     float3 up = normalize(cross(ahead, right));
-
-    /* Save the current view pyramid */
-    prev_pyramid = pyramid;
 
     bool changed = false;
     /* Apply any user inputs */
@@ -34,16 +46,6 @@ f32 Camera::update(const f32 t) {
     if (IsKeyDown(GLFW_KEY_LEFT_SHIFT)) pos -= speed * up, changed = true;
     target = pos + ahead;
 
-    /* Update the camera state */
-    ahead = normalize(target - pos);
-    up = normalize(cross(ahead, right));
-    right = normalize(cross(up, ahead));
-    tl = pos + 2.0f * ahead - ASPECT_RATIO * right + up;
-    tr = pos + 2.0f * ahead + ASPECT_RATIO * right + up;
-    bl = pos + 2.0f * ahead - ASPECT_RATIO * right - up;
-
-    pyramid = Pyramid(pos, ahead, tl - pos, tr - pos, bl - pos);
-    
     if (moved_forward) {
         /* Return the forward delta (for reprojection) */
         return forward ? speed : -speed;
