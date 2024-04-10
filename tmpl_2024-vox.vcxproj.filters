@@ -40,7 +40,6 @@
     <ClCompile Include="src\graphics\camera.cpp" />
     <ClCompile Include="src\graphics\noise\blue.cpp" />
     <ClCompile Include="src\graphics\skydome.cpp" />
-    <ClCompile Include="src\graphics\primitives\brick-volume.cpp" />
     <ClCompile Include="src\graphics\lighting\sphere-light.cpp" />
     <ClCompile Include="src\dev\gui.cpp" />
     <ClCompile Include="src\dev\dev.cpp" />
@@ -65,6 +64,7 @@
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\game\player.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\capsule.cpp" />
+    <ClCompile Include="src\game\enemy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\graphics\renderer.h" />
@@ -124,7 +124,6 @@
     <ClInclude Include="lib\ogt\ogt_vox.h" />
     <ClInclude Include="src\graphics\noise\blue.h" />
     <ClInclude Include="src\graphics\skydome.h" />
-    <ClInclude Include="src\graphics\primitives\brick-volume.h" />
     <ClInclude Include="src\graphics\tonemap.h" />
     <ClInclude Include="src\graphics\lighting\sphere-light.h" />
     <ClInclude Include="src\dev\gui.h" />
@@ -158,6 +157,7 @@
     <ClInclude Include="src\game\game.h" />
     <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\graphics\primitives\basic\capsule.h" />
+    <ClInclude Include="src\game\enemy.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

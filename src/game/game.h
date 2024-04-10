@@ -1,7 +1,9 @@
 #pragma once
 
 #include "graphics/renderer.h"
+
 #include "player.h"
+#include "enemy.h"
 
 class Game : public TheApp {
     /* User input */
@@ -9,6 +11,7 @@ class Game : public TheApp {
     bool escaped = false;
 
     Player* player = nullptr;
+    Enemy* enemies[4];
 
    public:
     /* Ray tracer */

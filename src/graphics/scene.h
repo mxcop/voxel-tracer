@@ -9,7 +9,7 @@ class Scene {
     SkyDome skydome;
 
     // TODO: remove polymorphism
-    Traceable** shapes = nullptr;
+    Traceable** shapes;
     u32 shapes_len = 0;
 
    public:
@@ -17,8 +17,9 @@ class Scene {
     vector<SphereLight> lights;
     Capsule laser_segments[8];
 
-    // TEMP: testing coherent traversal
-    CoherentVoxelVolume* cvv = nullptr;
+    /* Models */
+    OVoxelVolume* player = nullptr;
+    OVoxelVolume* enemies[4];
 
     /* Direction pointing towards the sun */
     const float3 sun_dir = {-0.619501f, 0.465931f, -0.631765f};

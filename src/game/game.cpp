@@ -10,7 +10,11 @@ void Game::init() {
     renderer = new Renderer();
     renderer->init();
 
-    player = new Player(renderer->camera);
+    player = new Player(renderer->camera, renderer->scene.player);
+
+    for (u32 i = 0; i < 4; i++) {
+        enemies[i] = new Enemy(renderer->scene.enemies[i]);
+    }
 
     DisableCursor();
 }
@@ -22,6 +26,10 @@ void Game::tick(const f32 dt) {
     renderer->tick(screen, dt);
 
     renderer->scene.tick(dt);
+
+    for (u32 i = 0; i < 4; i++) {
+        enemies[i]->tick(dt, renderer->camera.pos);
+    }
 
     /* Update the camera */
 #if 0

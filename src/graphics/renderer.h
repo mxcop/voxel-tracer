@@ -1,8 +1,6 @@
 #pragma once
 
 #include "graphics/camera.h"
-#include "graphics/primitives/voxel-volume.h"
-#include "graphics/primitives/brick-volume.h"
 #include "graphics/light.h"
 #include "graphics/noise/blue.h"
 #include "graphics/skydome.h"
@@ -10,12 +8,10 @@
 #include "graphics/bvh.h"
 #include "graphics/primitives/vv.h"
 #include "graphics/tonemap.h"
-#include "graphics/primitives/basic/sphere.h"
 #include "graphics/scene.h"
 #include "graphics/lighting/materials.h"
 
 #include "engine/physics/world.h"
-#include "game/robot-arm.h"
 
 /* Quite expensive! */
 #define DENOISE 0

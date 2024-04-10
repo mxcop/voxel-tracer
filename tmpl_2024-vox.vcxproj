@@ -184,6 +184,7 @@
     <ClCompile Include="src\engine\physics\collision\collision.cpp" />
     <ClCompile Include="src\engine\physics\collision\gjk.cpp" />
     <ClCompile Include="src\engine\physics\world.cpp" />
+    <ClCompile Include="src\game\enemy.cpp" />
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\game\player.cpp" />
     <ClCompile Include="src\game\robot-arm.cpp" />
@@ -196,7 +197,6 @@
     <ClCompile Include="src\graphics\primitives\basic\aabb.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\capsule.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\sphere.cpp" />
-    <ClCompile Include="src\graphics\primitives\brick-volume.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\obb.cpp" />
     <ClCompile Include="src\graphics\primitives\cvv.cpp" />
     <ClCompile Include="src\graphics\primitives\voxel-volume.cpp" />
@@ -241,6 +241,7 @@
     <ClInclude Include="src\engine\physics\object.h" />
     <ClInclude Include="src\engine\physics\transform.h" />
     <ClInclude Include="src\engine\physics\world.h" />
+    <ClInclude Include="src\game\enemy.h" />
     <ClInclude Include="src\game\game.h" />
     <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\game\robot-arm.h" />
@@ -256,7 +257,6 @@
     <ClInclude Include="src\graphics\primitives\basic\aabb.h" />
     <ClInclude Include="src\graphics\primitives\basic\capsule.h" />
     <ClInclude Include="src\graphics\primitives\basic\sphere.h" />
-    <ClInclude Include="src\graphics\primitives\brick-volume.h" />
     <ClInclude Include="src\graphics\primitives\basic\obb.h" />
     <ClInclude Include="src\graphics\primitives\cvv.h" />
     <ClInclude Include="src\graphics\primitives\traceable.h" />
