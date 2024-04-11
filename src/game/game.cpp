@@ -28,7 +28,7 @@ void Game::tick(const f32 dt) {
     renderer->scene.tick(dt);
 
     for (u32 i = 0; i < 4; i++) {
-        enemies[i]->tick(dt, renderer->camera.pos);
+        enemies[i]->tick(dt, renderer->camera.pos, &enemies[0], 4);
     }
 
     /* Update the camera */

@@ -4,7 +4,7 @@ class Player {
     Camera& camera;
     OVoxelVolume* model;
 
-    f32 pitch = 0, yaw = 0, roll = 0;
+    f32 pitch = 0, yaw = 0;
 
     float3 velocity = 0;
 

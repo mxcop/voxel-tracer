@@ -22,7 +22,6 @@ f32 Player::tick(const f32 dt, const int2 mouse_delta) {
 
     quat new_rot = quat::from_axis_angle({0, 1, 0}, yaw);
     new_rot = new_rot * quat::from_axis_angle({1, 0, 0}, pitch);
-    new_rot = new_rot * quat::from_axis_angle({0, 0, 1}, roll);
 
     const float3 up = new_rot.rotate_vec({0, 1, 0});
     const float3 ahead = new_rot.rotate_vec({0, 0, -1});
