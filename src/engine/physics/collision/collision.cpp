@@ -73,8 +73,8 @@ CollisionPoints ct_box_vs_sphere(const Collider* a, const Transform* ta, const C
     using Box = BoxCollider;
     using Sphere = SphereCollider;
 
-    Box* A = (Box*)a;
-    Sphere* B = (Sphere*)b;
+    // Box* A = (Box*)a;
+    // Sphere* B = (Sphere*)b;
 
     if (not gjk(*a, *ta, *b, *tb)) {
         return CollisionPoints();

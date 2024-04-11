@@ -52,7 +52,7 @@ void Renderer::init() {
 /**
  * @brief Ray trace the scene.
  */
-TraceResult Renderer::trace(Ray& ray, const u32 x, const u32 y, bool debug) const {
+TraceResult Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
     /* Intersect the scene */
     const HitInfo hit = scene.intersect(ray);
     TraceResult result(hit);
@@ -153,7 +153,7 @@ vector<float3> Renderer::path(const Ray& ray) const {
 /**
  * @brief Called every frame.
  */
-void Renderer::tick(Surface* screen, const f32 dt) {
+void Renderer::tick(Surface* screen, const f32) {
     frame++;
     if (frame > 120) frame = 0;
     Timer t;
@@ -197,7 +197,7 @@ void Renderer::tick(Surface* screen, const f32 dt) {
 #endif
     for (i32 y = 0; y < WIN_HEIGHT; ++y) {
         for (i32 x = 0; x < WIN_WIDTH; ++x) {
-            Ray ray = camera.get_primary_ray(x, y);
+            Ray ray = camera.get_primary_ray((f32)x, (f32)y);
 
             /* Trace the scene */
             const TraceResult r = trace(ray, x, y);
@@ -244,10 +244,10 @@ void Renderer::tick(Surface* screen, const f32 dt) {
 #endif
 }
 
-void Renderer::gui(bool& running, const f32 dt) {
+void Renderer::gui(bool&, const f32) {
     // TODO: remove this
-    // trace(dev::debug_packet, 0, 0, true);
-    //db::draw_aabb(0, 1, 0xFFFF0000);
+    trace(dev::debug_ray, 0, 0);
+    db::draw_normal(dev::debug_ray.origin, dev::debug_ray.dir, 0xFFFF0000);
     // dev::debug_packet.setup_slice(0, 1, 32);
     // scene.cvv->intersect(dev::debug_packet, true);
     // dev::debug_packet.traverse(0, 1, 32);

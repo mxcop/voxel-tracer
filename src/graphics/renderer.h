@@ -1,7 +1,6 @@
 #pragma once
 
 #include "graphics/camera.h"
-#include "graphics/light.h"
 #include "graphics/noise/blue.h"
 #include "graphics/skydome.h"
 #include "graphics/lighting/sphere-light.h"
@@ -23,7 +22,7 @@ struct TraceResult {
 
     TraceResult() = default;
     explicit TraceResult(const HitInfo& hit)
-        : albedo(hit.albedo), irradiance(0), depth(hit.depth) {}
+        : albedo(hit.albedo), irradiance(0), depth(hit.depth), reproject(true) {}
 
     /** @brief Don't reproject this sample (returns itself) */
     TraceResult& no_reproject() {
@@ -41,7 +40,7 @@ class Renderer {
     /** @brief Initialize the application */
     void init();
     /** @brief Trace the scene */
-    TraceResult trace(Ray& ray, const u32 x, const u32 y, bool debug = false) const;
+    TraceResult trace(Ray& ray, const u32 x, const u32 y) const;
     TraceResult8x8 trace(const RayPacket8x8& packet, const u32 x, const u32 y, bool debug = false) const;
     vector<float3> path(const Ray& ray) const;
     /** @brief Called as often as possible */

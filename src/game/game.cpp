@@ -1,6 +1,9 @@
 #include "game.h"
 
+#include "gui.h"
+
 #include "dev/gui.h"
+#include "dev/debug.h"
 
 /**
  * ===== Game Initialize =====
@@ -10,7 +13,7 @@ void Game::init() {
     renderer = new Renderer();
     renderer->init();
 
-    player = new Player(renderer->camera, renderer->scene.player);
+    player = new Player(renderer->camera);
 
     for (u32 i = 0; i < 4; i++) {
         enemies[i] = new Enemy(renderer->scene.enemies[i]);
@@ -22,13 +25,22 @@ void Game::init() {
 /**
  * ===== Game Tick / Update =====
  */
-void Game::tick(const f32 dt) { 
-    renderer->tick(screen, dt);
+void Game::tick(const f32 dt) {
+    if (state == GameState::MENU) {
+    //    renderer->camera.pos = {-1.86f, 1.455f, 2.69f};
+    //    renderer->camera.target = {-1.096f, 1.1667f, 2.1135f};
+    //    renderer->camera.tick();
 
-    renderer->scene.tick(dt);
+    //    renderer->scene.tick(dt);
+    //    renderer->tick(screen, dt);
 
+        EnableCursor();
+        return;
+    }
+
+    /* Update enemies */
     for (u32 i = 0; i < 4; i++) {
-        enemies[i]->tick(dt, renderer->camera.pos, &enemies[0], 4);
+        // enemies[i]->tick(dt, renderer->camera.pos, &enemies[0], 4);
     }
 
     /* Update the camera */
@@ -47,6 +59,38 @@ void Game::tick(const f32 dt) {
     renderer->depth_delta = player->tick(dt, delta);
 #endif
     renderer->camera.tick();
+
+    /* Update laser */
+    for (u32 i = 0; i < 8; i++) {
+        renderer->scene.laser_segments[i].a = 1000;
+        renderer->scene.laser_segments[i].b = 1000;
+    }
+    renderer->scene.tick(dt);
+
+    vector<float3> laser_path =
+        renderer->path(Ray(renderer->camera.pos - float3(0, 0.1f, 0),
+                           normalize(renderer->camera.target - renderer->camera.pos)));
+
+    //for (u32 i = 0; i < 8; i++) {
+    //    if (i < laser_path.size() - 1) {
+    //        const float3 a = laser_path[i];
+    //        const float3 b = laser_path[i + 1];
+    //        renderer->scene.laser_segments[i].a = a;
+    //        renderer->scene.laser_segments[i].b = b;
+    //    }
+    //}
+
+    const float3 last_point = laser_path[laser_path.size() - 1];
+    const float3 second_last_point = laser_path[laser_path.size() - 2];
+    const float3 laser_dir = normalize(last_point - second_last_point);
+    const Ray laser_ray = Ray(second_last_point, laser_dir);
+    
+    for (u32 i = 0; i < 4; i++) {
+        enemies[i]->process_hit(laser_ray);
+    }
+
+    renderer->scene.tick(dt);
+    renderer->tick(screen, dt);
 }
 
 /**
@@ -55,6 +99,29 @@ void Game::tick(const f32 dt) {
 void Game::gui(const f32 dt) {
     /* Development GUI */
     devgui_stats(dt);
+
+    if (state == GameState::MENU) {
+        /* Window composition */
+        float menu_width = centered_overlay();
+        const ImVec2 BUTTON_SIZE = ImVec2(menu_width * 0.5f, 32.0f);
+
+        /* Draw content */
+        if (ImGui::Begin("Menu", nullptr, overlay_flags)) {
+            centered_text("Main Menu");
+            ImGui::Separator();
+
+            if (aligned_button_h("Play", 0.5f, BUTTON_SIZE)) {
+                state = GameState::GAME;
+            }
+            if (aligned_button_h("Quit", 0.5f, BUTTON_SIZE)) {
+                running = false;
+            }
+        }
+        ImGui::End();
+        return;
+    }
+    
+    /* Development GUI */
     devgui_control();
 
 #ifdef DEV
@@ -120,38 +187,23 @@ void Game::MouseDown(int button) {
 #ifdef DEV
         if (button == 0) {
             const Camera& cam = renderer->camera;
-            const Ray ray = cam.get_primary_ray(mouse_pos.x, mouse_pos.y);
+            const Ray ray = cam.get_primary_ray((f32)mouse_pos.x, (f32)mouse_pos.y);
             dev::debug_ray = ray;
             dev::debug_ray.debug = true;
 
-            const int2 mp = floori(float2(mouse_pos) / 16.0f) * 16;
+            const float2 mp = floorf(float2(mouse_pos) / 16.0f) * 16.0f;
             const Ray ray_tl = cam.get_primary_ray(mp.x, mp.y);
-            const Ray ray_tr = cam.get_primary_ray(mp.x + 16, mp.y);
-            const Ray ray_bl = cam.get_primary_ray(mp.x, mp.y + 16);
+            const Ray ray_tr = cam.get_primary_ray(mp.x + 16.0f, mp.y);
+            const Ray ray_bl = cam.get_primary_ray(mp.x, mp.y + 16.0f);
             dev::debug_py = Pyramid(cam.pos, normalize(cam.target - cam.pos), ray_tl.dir,
                                     ray_tr.dir, ray_bl.dir);
 
-            dev::debug_packet = cam.get_packet8x8(mouse_pos.x, mouse_pos.y);
+            dev::debug_packet = cam.get_packet8x8((f32)mouse_pos.x, (f32)mouse_pos.y);
         }
 #endif
 
         mouse_old = mouse_pos, escaped = false;
         DisableCursor();
         return;
-    } else {
-        vector<float3> laser_path = renderer->path(
-            Ray(renderer->camera.pos, normalize(renderer->camera.target - renderer->camera.pos)));
-
-        for (u32 i = 0; i < 8; i++) {
-            if (i < laser_path.size() - 1) {
-                const float3 a = laser_path[i];
-                const float3 b = laser_path[i + 1];
-                renderer->scene.laser_segments[i].a = a;
-                renderer->scene.laser_segments[i].b = b;
-            } else {
-                renderer->scene.laser_segments[i].a = 1000;
-                renderer->scene.laser_segments[i].b = 1000;
-            }
-        }
     }
 }

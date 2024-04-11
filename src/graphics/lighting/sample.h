@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0
 /* Source : <https://github.com/tqjxlm/Monte-Carlo-Ray-Tracer> */
 /* Cosine weighted hemisphere sample around normal */
 static float3 sample_hemisphere_weighted(const f32 r1, const f32 r2, const float3& n) {
@@ -37,3 +38,4 @@ static float3 sample_hemisphere_uniform(const float3& n) {
         return R;
     }
 }
+#endif

@@ -7,8 +7,8 @@ constexpr f32 ENEMY_WEIGHT = 2.0f;
 
 Enemy::Enemy(OVoxelVolume* model) : model(model) { pos = RandomFloat3() * 32.0f - 16.0f; }
 
-void Enemy::tick(const f32 dt, const float3 player, Enemy** enemies, const u32 enemies_len) { 
-	/* Target the player */
+void Enemy::tick(const f32 dt, const float3& player, Enemy** enemies, const u32 enemies_len) {
+    /* Target the player */
     float3 target_dir = normalize(player - pos) * PLAYER_WEIGHT;
 
     /* Avoid other enemies */
@@ -22,19 +22,39 @@ void Enemy::tick(const f32 dt, const float3 player, Enemy** enemies, const u32 e
     }
     target_dir = normalize(target_dir); /* Final target */
 
-	/* Accelerate towards the player */
+    /* Accelerate towards the player */
     velocity += target_dir * dt * ENEMY_SPEED;
     velocity *= powf(0.3f, dt);
     pos += velocity * dt;
 
-	/* Look towards the player */
+    /* Look towards the player */
     const float3 look_dir = normalize(velocity);
-    pitch = asin(-look_dir.y);
+    // pitch = asin(-look_dir.y);
     yaw = atan2(look_dir.x, look_dir.z);
-	quat new_rot = quat::from_axis_angle({0, 1, 0}, yaw);
-    new_rot = new_rot * quat::from_axis_angle({1, 0, 0}, pitch);
+    quat new_rot = quat::from_axis_angle({0, 1, 0}, yaw);
+    // new_rot = new_rot * quat::from_axis_angle({1, 0, 0}, pitch);
 
     /* Update the model */
     model->set_position(pos);
-	model->set_rotation(new_rot);
+    model->set_rotation(new_rot);
+}
+
+void Enemy::process_hit(const Ray& laser) {
+    const HitInfo hit = model->intersect(laser);
+    if (hit.no_hit()) return;
+
+    /* Laser hit */
+    const float3 hit_point = laser.intersection(hit) - hit.normal * 0.001f;
+    const int3 voxel_point = make_int3(model->to_grid(hit_point));
+    model->set_voxel(voxel_point, 0x00);
+    health--;
+
+    /* Died */
+    //if (health <= 0) {
+    //    pos = RandomFloat3() * 32.0f - 16.0f;
+    //    velocity = 0;
+    //    health = 32;
+
+    //    model->reload_model("assets/vox/enemy-drone.vox");
+    //}
 }

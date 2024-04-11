@@ -367,15 +367,15 @@ class TheApp
 {
 public:
 	virtual void init() { /* defined empty so we can omit it from the renderer */ }
-	virtual void tick( const f32 dt ) = 0;
-	virtual void gui( const f32 dt ) { uiUpdated = false; }
+	virtual void tick( const f32 ) = 0;
+	virtual void gui( const f32 ) { uiUpdated = false; }
 	virtual void shutdown() { /* defined empty so we can omit it from the renderer */ }
-	virtual void MouseUp( int button ) { /* defined empty so we can omit it from the renderer */ }
-	virtual void MouseDown( int button ) { /* defined empty so we can omit it from the renderer */ }
-	virtual void MouseMove( int x, int y ) { /* defined empty so we can omit it from the renderer */ }
-	virtual void MouseWheel( float y ) { /* defined empty so we can omit it from the renderer */ }
-	virtual void KeyUp( int key ) { /* defined empty so we can omit it from the renderer */ }
-	virtual void KeyDown( int key ) { /* defined empty so we can omit it from the renderer */ }
+	virtual void MouseUp( int ) { /* defined empty so we can omit it from the renderer */ }
+	virtual void MouseDown( int ) { /* defined empty so we can omit it from the renderer */ }
+	virtual void MouseMove( int, int ) { /* defined empty so we can omit it from the renderer */ }
+	virtual void MouseWheel( float ) { /* defined empty so we can omit it from the renderer */ }
+	virtual void KeyUp( int ) { /* defined empty so we can omit it from the renderer */ }
+	virtual void KeyDown( int ) { /* defined empty so we can omit it from the renderer */ }
 	static inline JobManager* jm = JobManager::GetJobManager();
 	Surface* screen = 0;
 	bool uiUpdated;

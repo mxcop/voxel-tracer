@@ -88,7 +88,7 @@ public:
 	}
 	unsigned char* pixels;
 	unsigned int* pal;
-	int width, height;
+	int width = 0, height = 0;
 };
 
 }

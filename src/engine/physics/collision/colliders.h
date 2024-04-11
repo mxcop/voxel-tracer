@@ -8,7 +8,7 @@ struct Collider {
 
     Collider(ColliderType type) : type(type){};
 
-    virtual float3 furthest_point(const Transform& t, const float3& dir) const {
+    virtual float3 furthest_point(const Transform& t, const float3&) const {
         return t.position;
     };
 };
@@ -46,11 +46,10 @@ struct BoxCollider : Collider {
 };
 
 struct VoxelCollider : Collider {
-    /* Size in world units */
-    float3 extend;
     /* Size in voxels */
     int3 size;
-
+    /* Size in world units */
+    float3 extend;
     /* Abstracted voxel data */
     u8* voxels = nullptr;
     /* -> 2 bits per voxel? <-

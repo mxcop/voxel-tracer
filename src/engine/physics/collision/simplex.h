@@ -11,7 +11,7 @@ class Simplex {
         for (auto v = list.begin(); v != list.end(); v++) {
             m_points[std::distance(list.begin(), v)] = *v;
         }
-        size = list.size();
+        size = (i32)list.size();
 
         return *this;
     }

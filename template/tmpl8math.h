@@ -554,9 +554,9 @@ inline float2 floorf( const float2& v ) { return make_float2( floorf( v.x ), flo
 inline float3 floorf( const float3& v ) { return make_float3( floorf( v.x ), floorf( v.y ), floorf( v.z ) ); }
 inline float4 floorf( const float4& v ) { return make_float4( floorf( v.x ), floorf( v.y ), floorf( v.z ), floorf( v.w ) ); }
 
-inline int3 floori(const float3& v) { return make_int3(floorf(v.x), floorf(v.y), floorf(v.z)); }
-inline int2 floori(const float2& v) { return make_int2(floorf(v.x), floorf(v.y)); }
-inline uint3 flooru(const float3& v) { return make_uint3(floorf(v.x), floorf(v.y), floorf(v.z)); }
+inline int3 floori(const float3& v) { return make_int3((i32)floorf(v.x), (i32)floorf(v.y), (i32)floorf(v.z)); }
+inline int2 floori(const float2& v) { return make_int2((i32)floorf(v.x), (i32)floorf(v.y)); }
+inline uint3 flooru(const float3& v) { return make_uint3((u32)floorf(v.x), (u32)floorf(v.y), (u32)floorf(v.z)); }
 
 inline float2 ceilf( const float2& v ) { return make_float2( ceilf( v.x ), ceilf( v.y ) ); }
 inline float3 ceilf( const float3& v ) { return make_float3( ceilf( v.x ), ceilf( v.y ), ceilf( v.z ) ); }

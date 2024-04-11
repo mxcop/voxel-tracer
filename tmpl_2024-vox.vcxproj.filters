@@ -36,7 +36,6 @@
       <Filter>template\imgui</Filter>
     </ClCompile>
     <ClCompile Include="template\tmpl8math.cpp" />
-    <ClCompile Include="src\graphics\primitives\voxel-volume.cpp" />
     <ClCompile Include="src\graphics\camera.cpp" />
     <ClCompile Include="src\graphics\noise\blue.cpp" />
     <ClCompile Include="src\graphics\skydome.cpp" />
@@ -59,7 +58,6 @@
     <ClCompile Include="src\graphics\lighting\materials.cpp" />
     <ClCompile Include="src\graphics\scene.cpp" />
     <ClCompile Include="src\graphics\noise\sampler.cpp" />
-    <ClCompile Include="src\graphics\primitives\cvv.cpp" />
     <ClCompile Include="src\graphics\rays\packet.cpp" />
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\game\player.cpp" />
@@ -114,12 +112,10 @@
     <ClInclude Include="src\graphics\rays\ray.h" />
     <ClInclude Include="src\graphics\camera.h" />
     <ClInclude Include="template\types.h" />
-    <ClInclude Include="src\graphics\primitives\voxel-volume.h" />
     <ClInclude Include="src\graphics\rays\hit.h" />
     <ClInclude Include="src\curves\morton.h" />
     <ClInclude Include="src\graphics\rays\packet.h" />
     <ClInclude Include="src\simd.h" />
-    <ClInclude Include="src\graphics\light.h" />
     <ClInclude Include="src\graphics\rays\frustum.h" />
     <ClInclude Include="lib\ogt\ogt_vox.h" />
     <ClInclude Include="src\graphics\noise\blue.h" />
@@ -153,11 +149,11 @@
     <ClInclude Include="src\graphics\scene.h" />
     <ClInclude Include="src\graphics\noise\sampler.h" />
     <ClInclude Include="src\engine\physics\collision\sat.h" />
-    <ClInclude Include="src\graphics\primitives\cvv.h" />
     <ClInclude Include="src\game\game.h" />
     <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\graphics\primitives\basic\capsule.h" />
     <ClInclude Include="src\game\enemy.h" />
+    <ClInclude Include="src\game\gui.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

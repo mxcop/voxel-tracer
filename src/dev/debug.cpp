@@ -19,15 +19,13 @@ inline static int2 world_to_screen(const float3& p) {
  * @brief Draw a line from pixel A to B.
  */
 inline static void draw_line_screen(const int2& a, const int2& b, const u32 c) {
-    dev::db_screen->Line(a.x, a.y, b.x, b.y, c);
+    dev::db_screen->Line((f32)a.x, (f32)a.y, (f32)b.x, (f32)b.y, c);
 }
 
 /**
  * @brief Draw a line from world point A to B.
  */
 void draw_line(const float3& a, const float3& b, const u32 c) {
-    const Pyramid& view_pyramid = dev::main_camera->prev_pyramid;
-
     const int2 a_pix = world_to_screen(a);
     if (a_pix.x == WIN_WIDTH * 100'000) return;
     const int2 b_pix = world_to_screen(b);

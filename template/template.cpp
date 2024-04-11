@@ -84,7 +84,7 @@ void ErrorCallback( int, const char* description )
 }
 
 // Application entry point
-void main()
+int main()
 {
     _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
 
@@ -377,6 +377,7 @@ void main()
 	ImGui::DestroyContext();
 	glfwDestroyWindow( window );
 	glfwTerminate();
+    return 1;
 }
 
 // Jobmanager implementation

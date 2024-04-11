@@ -21,7 +21,7 @@ void PhyWorld::step(const f32 dt) {
     }
 }
 
-void PhyWorld::resolve(const f32 dt) {
+void PhyWorld::resolve(const f32) {
     /* Collision buffer */
     vector<Collision> c_buffer = {};
     c_buffer.reserve(object_pool.get_size());

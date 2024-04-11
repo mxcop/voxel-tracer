@@ -2,9 +2,9 @@
 
 #include "pyramid.h"
 
-struct alignas(64) RayPacket8x8 {
-    Ray rays[8 * 8];
+struct RayPacket8x8 {
     Pyramid bounds;
+    Ray rays[8 * 8];
 
     void calc_bounds() {
         bounds = Pyramid(rays[0].origin, (rays[0].dir + rays[63].dir) * 0.5f, rays[0].dir, rays[7].dir,
@@ -13,7 +13,8 @@ struct alignas(64) RayPacket8x8 {
 };
 
 /* SIMD (SSE) Ray packet structure. */
-struct alignas(64) RayPacket128 {
+struct RayPacket128 {
+    float3 signs; /* Ray signs are shared by all rays in packet! */
     union {
         f128 ro[3]; /* Ray origin (XYZ) */
         struct {
@@ -38,7 +39,6 @@ struct alignas(64) RayPacket128 {
             f128 ird_z;
         };
     };
-    float3 signs; /* Ray signs are shared by all rays in packet! */
 
     RayPacket128() = default;
     inline RayPacket128(const f128 shared_origin[3], const f128 dir[3]) {

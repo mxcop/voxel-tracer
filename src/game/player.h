@@ -2,7 +2,6 @@
 
 class Player {
     Camera& camera;
-    OVoxelVolume* model;
 
     f32 pitch = 0, yaw = 0;
 
@@ -10,7 +9,7 @@ class Player {
 
    public:
     Player() = delete;
-    Player(Camera& camera, OVoxelVolume* model);
+    Player(Camera& camera);
 
     /* Returns the depth delta! */
     f32 tick(const f32 dt, const int2 mouse_delta);

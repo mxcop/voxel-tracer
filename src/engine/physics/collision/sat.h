@@ -136,8 +136,7 @@ inline bool box_sat(const box_t& box_a, const box_t& box_b) {
 /**
  * @brief Find if there is a separating plane between two sets of corners.
  */
-inline bool separation(const corners& corners_a, const Pyramid& pyramid, const float3& n,
-                       bool debug = false) {
+inline bool separation(const corners& corners_a, const Pyramid& pyramid, const float3& n) {
     /* Get min and max projection of A and B onto the normal */
     f32 a_min, a_max, b_min, b_max;
     projected_minmax(corners_a, n, a_min, a_max);

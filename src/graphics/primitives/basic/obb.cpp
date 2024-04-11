@@ -23,13 +23,13 @@ void OBB::set_rotation(const quat& rotation) {
     set_rotation_pivot(pivot, rot);
 }
 
-void OBB::set_rotation_pivot(const float3 pivot, const quat& rotation) {
+void OBB::set_rotation_pivot(const float3 _pivot, const quat& rotation) {
     rot = rotation;
     /* Rotate around the pivot of the box */
     model = mat4::Identity();
     model = model * mat4::Translate(pos);
     model = model * rotation.toMatrix();
-    model = model * mat4::Translate(-pivot);
+    model = model * mat4::Translate(-_pivot);
 
     imodel = model.Inverted();
 }

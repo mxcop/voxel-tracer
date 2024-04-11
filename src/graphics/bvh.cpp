@@ -3,7 +3,7 @@
 #include <utility> /* std::swap */
 #include "engine/physics/collision/sat.h"
 
-Bvh::Bvh(u32 size, Traceable** new_prims) : size(size) { build(size, new_prims); }
+Bvh::Bvh(u32 size, Traceable** new_prims) : size((u16)size) { build(size, new_prims); }
 
 void update_node_bb(Bvh::Node& node, Traceable** prims) {
     node.aabb_min = float3(BIG_F32);
@@ -76,7 +76,7 @@ f32 Bvh::find_best_split_plane(const Node& node, i32& axis, f32& pos) const {
         f32 scale = BINS / (bmax - bmin);
         for (u32 i = 0; i < node.prim_count; ++i) {
             const Traceable& prim = *prims[node.left_first + i];
-            i32 bin_idx = fminf(BINS - 1, static_cast<i32>((prim.center()[a] - bmin) * scale));
+            i32 bin_idx = (i32)fminf(BINS - 1, (f32)(i32)((prim.center()[a] - bmin) * scale));
             bins[bin_idx].prim_count++;
             const AABB prim_bounds = prim.get_aabb();
             bins[bin_idx].aabb.grow(prim_bounds.min);
@@ -164,7 +164,7 @@ void Bvh::subdivide(Bvh::Node& node, int lvl) {
     }
 
     const i32 left_count = i - node.left_first;
-    if (left_count == 0 || left_count == node.prim_count) return;
+    if (left_count == 0 || left_count == (i32)node.prim_count) return;
 
     /* Initialize child nodes */
     int left_child_idx = nodes_used++;
@@ -184,9 +184,9 @@ void Bvh::subdivide(Bvh::Node& node, int lvl) {
     subdivide(nodes[right_child_idx], lvl + 1);
 }
 
-void Bvh::build(const u32 size, Traceable** new_prims) {
+void Bvh::build(const u32 new_size, Traceable** new_prims) {
     prims = new_prims;
-    this->size = size;
+    size = (u16)new_size;
     nodes = (Node*)MALLOC64(sizeof(Node) * size * 2);
     if (!nodes) return;
 

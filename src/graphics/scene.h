@@ -1,6 +1,5 @@
 #pragma once
 
-#include "primitives/cvv.h"
 #include "primitives/basic/capsule.h"
 
 class Scene {
@@ -8,18 +7,16 @@ class Scene {
     Bvh* bvh = nullptr;
     SkyDome skydome;
 
-    // TODO: remove polymorphism
-    Traceable** shapes;
-    u32 shapes_len = 0;
-
    public:
     /* Lighting */
     vector<SphereLight> lights;
     Capsule laser_segments[8];
 
     /* Models */
-    OVoxelVolume* player = nullptr;
     OVoxelVolume* enemies[4];
+    // TODO: remove polymorphism
+    Traceable** shapes;
+    u32 shapes_len = 0;
 
     /* Direction pointing towards the sun */
     const float3 sun_dir = {-0.619501f, 0.465931f, -0.631765f};

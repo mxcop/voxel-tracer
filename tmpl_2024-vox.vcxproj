@@ -54,7 +54,7 @@
       <AdditionalIncludeDirectories>template;.;src;lib;lib\imgui;lib\glad;lib\glfw\include;lib\OpenCL\inc;lib\zlib</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
@@ -86,6 +86,7 @@
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp20</LanguageStandard>
       <OpenMPSupport Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</OpenMPSupport>
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">precomp.h</ForcedIncludeFiles>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -149,6 +150,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <ControlFlowGuard>false</ControlFlowGuard>
       <ForcedIncludeFiles>precomp.h</ForcedIncludeFiles>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
@@ -159,6 +161,7 @@
       <ControlFlowGuard>false</ControlFlowGuard>
       <ForcedIncludeFiles>precomp.h</ForcedIncludeFiles>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <Profile>true</Profile>
@@ -198,8 +201,6 @@
     <ClCompile Include="src\graphics\primitives\basic\capsule.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\sphere.cpp" />
     <ClCompile Include="src\graphics\primitives\basic\obb.cpp" />
-    <ClCompile Include="src\graphics\primitives\cvv.cpp" />
-    <ClCompile Include="src\graphics\primitives\voxel-volume.cpp" />
     <ClCompile Include="src\graphics\primitives\vv.cpp" />
     <ClCompile Include="src\graphics\rays\frustum.cpp" />
     <ClCompile Include="src\graphics\rays\packet.cpp" />
@@ -243,11 +244,11 @@
     <ClInclude Include="src\engine\physics\world.h" />
     <ClInclude Include="src\game\enemy.h" />
     <ClInclude Include="src\game\game.h" />
+    <ClInclude Include="src\game\gui.h" />
     <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\game\robot-arm.h" />
     <ClInclude Include="src\graphics\bvh.h" />
     <ClInclude Include="src\graphics\camera.h" />
-    <ClInclude Include="src\graphics\light.h" />
     <ClInclude Include="src\graphics\lighting\materials.h" />
     <ClInclude Include="src\graphics\lighting\sample.h" />
     <ClInclude Include="src\graphics\lighting\sphere-light.h" />
@@ -258,12 +259,10 @@
     <ClInclude Include="src\graphics\primitives\basic\capsule.h" />
     <ClInclude Include="src\graphics\primitives\basic\sphere.h" />
     <ClInclude Include="src\graphics\primitives\basic\obb.h" />
-    <ClInclude Include="src\graphics\primitives\cvv.h" />
     <ClInclude Include="src\graphics\primitives\traceable.h" />
     <ClInclude Include="src\graphics\primitives\vv.h" />
     <ClInclude Include="src\graphics\rays\frustum.h" />
     <ClInclude Include="src\graphics\rays\hit.h" />
-    <ClInclude Include="src\graphics\primitives\voxel-volume.h" />
     <ClInclude Include="src\graphics\rays\packet.h" />
     <ClInclude Include="src\graphics\rays\pyramid.h" />
     <ClInclude Include="src\graphics\rays\ray.h" />

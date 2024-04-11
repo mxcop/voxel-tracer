@@ -5,6 +5,12 @@
 #include "player.h"
 #include "enemy.h"
 
+enum class GameState {
+    MENU,
+    GAME,
+    GAMEOVER
+};
+
 class Game : public TheApp {
     /* User input */
     int2 mouse_old = 0, mouse_pos = 0;
@@ -12,6 +18,8 @@ class Game : public TheApp {
 
     Player* player = nullptr;
     Enemy* enemies[4];
+
+    GameState state = GameState::MENU;
 
    public:
     /* Ray tracer */
@@ -27,10 +35,10 @@ class Game : public TheApp {
     void shutdown();
 
     /* (Tmpl8) User input */
-    void MouseUp(int button) {}
+    void MouseUp(int) {}
     void MouseDown(int button);
     void MouseMove(int x, int y) { mouse_pos.x = x, mouse_pos.y = y; }
-    void MouseWheel(float y) {}
-    void KeyUp(int key) {}
-    void KeyDown(int key) {}
+    void MouseWheel(float) {}
+    void KeyUp(int) {}
+    void KeyDown(int) {}
 };

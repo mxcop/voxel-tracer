@@ -4,8 +4,8 @@
 inline void horizontal_blur(const float4* in, float4* out, const i32 w, const i32 h,
                                         const i32 r) {
     const f32 iarr = 1.f / (r + r + 1);
-    const f32 iwidth = 1.f / w;
-#pragma omp parallel for
+    // const f32 iwidth = 1.f / w;
+//#pragma omp parallel for
     for (i32 i = 0; i < h; i++) {
         const i32 begin = i * w;
         const i32 end = begin + w;
@@ -51,7 +51,6 @@ inline void horizontal_blur(const float4* in, float4* out, const i32 w, const i3
  */
 inline void flip_block(const float4* in, float4* out, const i32 w, const i32 h) {
     constexpr i32 block = 256 / 4;
-#pragma omp parallel for collapse(2)
     for (i32 x = 0; x < w; x += block)
         for (i32 y = 0; y < h; y += block) {
             const float4* p = in + y * w + x;
@@ -74,12 +73,12 @@ inline void flip_block(const float4* in, float4* out, const i32 w, const i32 h) 
 inline f32 sigma_to_box_radius(i32 boxes[], const f32 sigma, const i32 n) {
     // ideal filter width
     float wi = std::sqrt((12 * sigma * sigma / n) + 1);
-    int wl = wi;  // no need std::floor
+    int wl = (int)wi;  // no need std::floor
     if (wl % 2 == 0) wl--;
     int wu = wl + 2;
 
     float mi = (12 * sigma * sigma - n * wl * wl - 4 * n * wl - 3 * n) / (-4 * wl - 4);
-    int m = mi + 0.5f;  // avoid std::round by adding 0.5f and cast to integer type
+    int m = (int)(mi + 0.5f);  // avoid std::round by adding 0.5f and cast to integer type
 
     for (int i = 0; i < n; i++) boxes[i] = ((i < m ? wl : wu) - 1) / 2;
 
@@ -92,7 +91,7 @@ inline void fast_gaussian_blur(float4*& in, float4*& out, const i32 w, const i32
     sigma_to_box_radius(boxes, sigma, n);
 
     // perform N horizontal blur passes
-    for (u32 i = 0; i < n; ++i) {
+    for (i32 i = 0; i < n; ++i) {
         horizontal_blur(in, out, w, h, boxes[i]);
         std::swap(in, out);
     }
@@ -102,7 +101,7 @@ inline void fast_gaussian_blur(float4*& in, float4*& out, const i32 w, const i32
     std::swap(in, out);
 
     // perform N horizontal blur passes on flipped image
-    for (u32 i = 0; i < n; ++i) {
+    for (i32 i = 0; i < n; ++i) {
         horizontal_blur(in, out, h, w, boxes[i]);
         std::swap(in, out);
     }

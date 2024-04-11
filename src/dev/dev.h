@@ -1,7 +1,7 @@
 #pragma once
 
 class Renderer;
-class Camera;
+struct Camera;
 class Pyramid;
 struct TraceResult;
 struct HitInfo;

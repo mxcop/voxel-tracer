@@ -45,7 +45,7 @@ class Pool {
 
             data[i] = element;
             status[i] = true;
-            return i;
+            return (i32)i;
         }
 
         /* Exit if the pool is full */
@@ -58,7 +58,7 @@ class Pool {
         status[size] = true;
 
         size++;
-        return size - 1;
+        return (i32)size - 1;
     }
 
     /**
@@ -69,6 +69,7 @@ class Pool {
      */
     T& get(size_t idx) {
         if (idx < size) return data[idx];
+        return data[0]; /* Silly?! */
     }
 
     /**

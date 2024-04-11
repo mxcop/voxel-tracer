@@ -2,11 +2,9 @@
 
 #define DRONE_CONTROLS 0
 
-Player::Player(Camera& camera, OVoxelVolume* model) : camera(camera), model(model) {}
+Player::Player(Camera& camera) : camera(camera) {}
 
 f32 Player::tick(const f32 dt, const int2 mouse_delta) { 
-    Camera& c = camera;
-
     /* Input handling */
     if (IsKeyDown(GLFW_KEY_UP)) pitch += dt;
     if (IsKeyDown(GLFW_KEY_DOWN)) pitch -= dt;
@@ -48,8 +46,8 @@ f32 Player::tick(const f32 dt, const int2 mouse_delta) {
     camera.set_rot(new_rot);
 
     /* Update model transform */
-    model->set_position(camera.pos + float3(-0.025f, 0.2f, 0));
-    model->set_rotation(quat::from_axis_angle({0, 1, 0}, yaw));
+    // model->set_position(camera.pos + float3(-0.025f, 0.2f, 0));
+    // model->set_rotation(quat::from_axis_angle({0, 1, 0}, yaw));
 
 	return depth_delta;
 }

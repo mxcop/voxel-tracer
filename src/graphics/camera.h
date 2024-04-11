@@ -41,7 +41,7 @@ struct Camera {
 
         for (u32 v = 0; v < 8; v ++) {
             for (u32 u = 0; u < 8; u ++) {
-                const u32 ix = x + u, iy = y + v;
+                const f32 ix = x + (f32)u, iy = y + (f32)v;
 
                 packet.rays[v * 8 + u] = get_primary_ray(ix, iy);
             }

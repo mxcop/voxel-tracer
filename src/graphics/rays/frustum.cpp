@@ -67,7 +67,7 @@ bool Frustum::intersect_unitcube() const {
     for (u32 z = 0; z < 2; z++) {
         for (u32 y = 0; y < 2; y++) {
             for (u32 x = 0; x < 2; x++) {
-                cube_verts[(z * 2 * 2) + (y * 2) + x] = -float3(x, y, z) * cube_max;
+                cube_verts[(z * 2 * 2) + (y * 2) + x] = -float3((f32)x, (f32)y, (f32)z) * cube_max;
             }
         }
     }

@@ -26,7 +26,9 @@ class Traceable {
      */
     virtual HitInfo intersect(const Ray& ray) const = 0;
 
-    virtual PacketHit8x8 intersect(const RayPacket8x8& packet, const bool debug = false) const {
+    virtual PacketHit8x8 intersect(const RayPacket8x8&, const bool) const {
         return PacketHit8x8();
     };
+
+    virtual ~Traceable(){};
 };

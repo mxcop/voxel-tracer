@@ -59,10 +59,10 @@ __forceinline i128 morton_encode(const i128 x, const i128 y, const i128 z) {
 }
 
 inline i128 morton_encode_ex(const i128 x, const i128 y, const i128 z) {
-    return _mm_set_epi32(morton_encode(x.m128i_u32[3], y.m128i_u32[3], z.m128i_u32[3]),
-                         morton_encode(x.m128i_u32[2], y.m128i_u32[2], z.m128i_u32[2]),
-                         morton_encode(x.m128i_u32[1], y.m128i_u32[1], z.m128i_u32[1]),
-                         morton_encode(x.m128i_u32[0], y.m128i_u32[0], z.m128i_u32[0]));
+    return _mm_set_epi32((u32)morton_encode(x.m128i_u32[3], y.m128i_u32[3], z.m128i_u32[3]),
+                         (u32)morton_encode(x.m128i_u32[2], y.m128i_u32[2], z.m128i_u32[2]),
+                         (u32)morton_encode(x.m128i_u32[1], y.m128i_u32[1], z.m128i_u32[1]),
+                         (u32)morton_encode(x.m128i_u32[0], y.m128i_u32[0], z.m128i_u32[0]));
 }
 
 /* Morton code to 3D coordinate. */

@@ -6,7 +6,7 @@
 struct Ray {
     /* Ray origin */
     union {
-        f128 o;
+        f128 o = _mm_setzero_ps();
         struct {
             float3 origin;
             f32 _;
@@ -14,7 +14,7 @@ struct Ray {
     };
     /* Ray direction */
     union {
-        f128 d;
+        f128 d = _mm_setzero_ps();
         struct {
             float3 dir;
             f32 _;
@@ -22,7 +22,7 @@ struct Ray {
     };
     /* Ray direction reciprocal */
     union {
-        f128 rd;
+        f128 rd = _mm_setzero_ps();
         struct {
             float3 r_dir;
             f32 _;
@@ -30,7 +30,7 @@ struct Ray {
     };
     /* Ray direction sign (-1 | 1) */
     union {
-        f128 sd;
+        f128 sd = _mm_setzero_ps();
         struct {
             float3 sign_dir;
             f32 _;
@@ -63,7 +63,8 @@ struct Ray {
         const f128 vmax4 = _mm_max_ps(t1, t2), vmin4 = _mm_min_ps(t1, t2);
 
         /* Set the 4th element to 0 */
-        const f128 tmin4 = (f128&)_mm_slli_si128((i128&)vmin4, 4);
+        const i128 itmin4 = _mm_slli_si128((i128&)vmin4, 4);
+        const f128 tmin4 = (f128&)itmin4;
 
         /* Get the horizontal minimum and maximum "t" */
         const f32 tmax = _mm_hmin3_ps(vmax4), tmin = _mm_hmax_ps(tmin4);
@@ -79,13 +80,13 @@ struct Ray {
     __forceinline i32 getsign(const f32 f) const { return (i32)(((u32&)f) >> 31) * 2 - 1; }
 
     /* Get the signs of a vector (-1 | 1) */
-    __forceinline float3 sign_of_dir(float3 d) const {
+    __forceinline float3 sign_of_dir(float3) const {
         {
             float3 signs = float3();
 #if 1
-            signs.x = -getsign(dir.x);
-            signs.y = -getsign(dir.y);
-            signs.z = -getsign(dir.z);
+            signs.x = (f32)-getsign(dir.x);
+            signs.y = (f32)-getsign(dir.y);
+            signs.z = (f32)-getsign(dir.z);
 #else
             signs.x = copysign(1.0f, dir.x);
             signs.y = copysign(1.0f, dir.y);

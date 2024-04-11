@@ -1,10 +1,8 @@
 #include "scene.h"
 
-constexpr u32 MODELS_NUM = 6;
+constexpr u32 MODELS_NUM = 5;
 
 Scene::Scene() {
-    constexpr u32 TEST_SIZE = 16;
-
     /* Material testing shape */
     shapes_len = MODELS_NUM + 8;
     shapes = new Traceable* [shapes_len] {};
@@ -13,14 +11,10 @@ Scene::Scene() {
     auto cube = new OVoxelVolume(0, "assets/vox/testing/glass-box.vox", 0);
     shapes[0] = cube;
 
-    /* Player model */
-    player = new OVoxelVolume(0, "assets/vox/player-drone.vox", 0);
-    shapes[1] = player;
-
     /* Enemy models */
     for (u32 i = 0; i < 4; i++) {
         enemies[i] = new OVoxelVolume({(f32)i, 2, 0}, "assets/vox/enemy-drone.vox", 0);
-        shapes[2 + i] = enemies[i];
+        shapes[1 + i] = enemies[i];
     }
 
     /* Laser segment capsules */
@@ -43,7 +37,7 @@ Scene::~Scene() {
     }
 }
 
-void Scene::tick(const f32 dt) {
+void Scene::tick(const f32) {
     /* Reconstruct the BVH in case something moved */
     bvh->build(shapes_len, shapes);
 }

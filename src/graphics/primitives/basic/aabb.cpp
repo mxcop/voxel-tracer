@@ -55,7 +55,8 @@ HitInfo AABB::intersect(const Ray& ray) const {
     const f128 vmax4 = _mm_max_ps(t1, t2), vmin4 = _mm_min_ps(t1, t2);
 
     /* Set the 4th element to 0 */
-    const f128 tmin4 = (f128&)_mm_slli_si128((i128&)vmin4, 4);
+    const i128 itmin4 = _mm_slli_si128((i128&)vmin4, 4);
+    const f128 tmin4 = (f128&)itmin4;
 
     /* Get the horizontal minimum and maximum "t" */
     const f32 tmax = _mm_hmin3_ps(vmax4), tmin = _mm_hmax_ps(tmin4);

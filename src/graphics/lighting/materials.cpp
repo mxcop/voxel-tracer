@@ -65,15 +65,15 @@ f32 fresnel_reflect(const f32 n1, const f32 n2, const float3& n, const float3& i
     r0 *= r0;
     f32 cosX = -dot(n, i);
     if (n1 > n2) {
-        const f32 n = n1 / n2;
-        const f32 sinT2 = n * n * (1.0 - cosX * cosX);
+        const f32 nd = n1 / n2;
+        const f32 sinT2 = nd * nd * (1.0f - cosX * cosX);
 
         /* Total internal reflection */
-        if (sinT2 > 1.0) return f90;
-        cosX = sqrt(1.0 - sinT2);
+        if (sinT2 > 1.0f) return f90;
+        cosX = sqrt(1.0f - sinT2);
     }
-    const f32 x = 1.0 - cosX;
-    const f32 ret = r0 + (1.0 - r0) * x * x * x * x * x;
+    const f32 x = 1.0f - cosX;
+    const f32 ret = r0 + (1.0f - r0) * x * x * x * x * x;
 
     /* Lerp from f0 to f90 */
     return f0 + f90 * ret;
@@ -83,7 +83,7 @@ f32 fresnel_reflect(const f32 n1, const f32 n2, const float3& n, const float3& i
  * @brief Evaluate a mirror material.
  */
 void eval_mirror(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scene& scene,
-    const NoiseSampler& noise) {
+                 const NoiseSampler& noise) {
     eval.bounces++;
 
     const float3 reflect_dir = reflect(ray.dir, hit.normal);
@@ -252,8 +252,8 @@ float3 ambient_light(const float3& p, const float3& n, const Scene& scene,
     if (not in_shadow) {
         /* Adjust the samples based on their probability distribution function (PDF) */
         const f32 pdf = dot(ambient_dir, n) * INVPI; /* (cos(a) / PI) */
-        const float3 sample = scene.sample_sky(ambient_ray) * 0.25f;
-        return clamp_color(sample / pdf, 8.0f);
+        const float3 sky_sample = scene.sample_sky(ambient_ray) * 0.25f;
+        return clamp_color(sky_sample / pdf, 8.0f);
     }
     return 0;
 }
@@ -264,8 +264,8 @@ float fresnel_reflect_prob(const f32 n1, const f32 n2, const float3& n, const fl
     r0 *= r0;
     float cosX = -dot(n, incident);
     if (n1 > n2) {
-        float n = n1 / n2;
-        float sinT2 = n * n * (1.0f - cosX * cosX);
+        float nd = n1 / n2;
+        float sinT2 = nd * nd * (1.0f - cosX * cosX);
         // Total internal reflection
         if (sinT2 > 1.0f) return 1.0f;
         cosX = sqrt(1.0f - sinT2);
@@ -280,9 +280,9 @@ float fresnel_reflect_prob(const f32 n1, const f32 n2, const float3& n, const fl
 
 float3 refract(const float3& n, const float3& incident, const f32 eta) {
     const f32 d = dot(n, incident);
-    const f32 k = 1.0 - eta * eta * (1.0 - d * d);
-    if (k < 0.0)
-        return 0;
+    const f32 k = 1.0f - eta * eta * (1.0f - d * d);
+    if (k < 0.0f)
+        return 0.0f;
     else
         return normalize(eta * incident - (eta * d + sqrt(k)) * n);
 }

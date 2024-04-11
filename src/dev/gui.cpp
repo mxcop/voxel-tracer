@@ -12,7 +12,7 @@ f32 power = 16.0f;
 /**
  * @brief Update the development statistics GUI.
  */
-void devgui_stats(const f32 dt) {
+void devgui_stats(const f32) {
     if (dev::hide_devgui) return;
 
     /* Window position */
@@ -29,13 +29,13 @@ void devgui_stats(const f32 dt) {
     /* Display performance */
     ImGui::SetNextWindowBgAlpha(0.35f);
     if (ImGui::Begin("Stats", nullptr, overlay_flags)) {
-        f32 frame_time_us = dev::frame_time * 1'000'000.0f;
-        f64 win_size = (f64)WIN_WIDTH * WIN_HEIGHT;
+        // f32 frame_time_us = dev::frame_time * 1'000'000.0f;
+        // f64 win_size = (f64)WIN_WIDTH * WIN_HEIGHT;
 
         static f32 avg = 10, alpha = 1;
         avg = (1 - alpha) * avg + alpha * dev::frame_time * 1000;
         if (alpha > 0.1f) alpha *= 0.5f;
-        f32 fps = 1000.0f / avg, rps = (WIN_WIDTH * WIN_HEIGHT) / avg;
+        f32 fps = 1000.0f / avg/*, rps = (WIN_WIDTH * WIN_HEIGHT) / avg*/;
 
         ImGui::Text("Perf overlay\n");
         ImGui::Separator();

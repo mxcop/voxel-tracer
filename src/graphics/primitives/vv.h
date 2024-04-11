@@ -16,6 +16,9 @@ class OVoxelVolume : public Traceable {
     OBB bb;
     float3 pivot;
 
+    /* Voxels per unit. */
+    f32 vpu;
+
     /* 8x8x8 voxels */
     struct Brick512 {
         u8* voxels = nullptr; /* Can be null! */
@@ -23,9 +26,9 @@ class OVoxelVolume : public Traceable {
     };
 
     struct Brickmap {
-        Brick512* bricks = nullptr;
         /* Brick map size in bricks. */
         int3 size = 0;
+        Brick512* bricks = nullptr;
 
         Brickmap() = default;
         explicit Brickmap(const int3& grid_size) {
@@ -34,17 +37,15 @@ class OVoxelVolume : public Traceable {
         }
     } brickmap;
 
+    int3 grid_size = 0;
+
     /* Voxel material indices, 1 byte each. */
 // #if USE_BITPACKING
     u8* voxels = nullptr;
 // #endif
-    int3 grid_size = 0;
 
     /* Voxel material palette, 8 bit rgba. */
     u32* palette = nullptr;
-
-    /* Voxels per unit. */
-    f32 vpu;
 
     /**
      * @brief Get a brick from the brickmap by position.
@@ -126,9 +127,10 @@ class OVoxelVolume : public Traceable {
     HitInfo intersect(const Ray& ray) const override;
     PacketHit8x8 intersect(const RayPacket8x8& packet, const bool debug = false) const override;
     
-    void set_pivot(const float3 pivot) { bb.pivot = pivot, this->pivot = pivot; };
+    void set_pivot(const float3 _pivot) { bb.pivot = _pivot, pivot = _pivot; };
     void set_rotation(const quat& rot);
     void set_position(const float3& pos);
+    float3 to_grid(const float3& pos) const;
 
     __forceinline i32 getsign(const f32 f) const { return (i32)(((u32&)f) >> 31) * 2 - 1; }
 
@@ -139,4 +141,6 @@ class OVoxelVolume : public Traceable {
      * @param value Material index to assign.
      */
     void set_voxel(const int3& pos, const u8 value);
+
+    void reload_model(const char* vox_path, const i32 model_id = 0);
 };

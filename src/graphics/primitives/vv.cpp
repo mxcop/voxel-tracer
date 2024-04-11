@@ -53,6 +53,38 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const char* vox_path, const i32 mo
     for (u32 c = 0; c < 256; ++c) palette[c] = merge_u8_u32(scene->palette.color[c]);
 }
 
+void OVoxelVolume::reload_model(const char* vox_path, const i32 model_id) {
+    /* Load the model file */
+    FILE* fp = fopen(vox_path, "rb");
+    uint32_t buffer_size = _filelength(_fileno(fp));
+    uint8_t* buffer = new uint8_t[buffer_size];
+    fread(buffer, buffer_size, 1, fp);
+    fclose(fp);
+
+    /* Parse the model file */
+    const ogt_vox_scene* scene = ogt_vox_read_scene(buffer, buffer_size);
+    delete[] buffer; /* Cleanup */
+
+    /* Ignore everything except the first model */
+    const ogt_vox_model* model = scene->models[model_id];
+
+    /* Format the grid */
+    for (u32 z = 0; z < model->size_z; z++) {
+        for (u32 y = 0; y < model->size_y; y++) {
+            for (u32 x = 0; x < model->size_x; x++) {
+                /* .vox model axis are weird... */
+                const u32 mi = (z * model->size_y * model->size_x) +
+                               ((model->size_y - y - 1) * model->size_x) + x;
+
+                set_voxel(int3(y, z, x), model->voxel_data[mi]);
+            }
+        }
+    }
+
+    /* Initialize the grid palette */
+    for (u32 c = 0; c < 256; ++c) palette[c] = merge_u8_u32(scene->palette.color[c]);
+}
+
 OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 vpu)
     : bb(OBB(pos, float3(grid_size) / vpu)),
       brickmap(Brickmap(grid_size)),
@@ -63,10 +95,10 @@ OVoxelVolume::OVoxelVolume(const float3& pos, const int3& grid_size, const f32 v
     // #endif
 
     /* Fill the grid with some noise */
-    for (u32 z = 0; z < grid_size.z; z++) {
-        for (u32 y = 0; y < grid_size.y; y++) {
-            for (u32 x = 0; x < grid_size.x; x++) {
-                const u32 i = (z * grid_size.y * grid_size.x) + (y * grid_size.x) + x;
+    for (i32 z = 0; z < grid_size.z; z++) {
+        for (i32 y = 0; y < grid_size.y; y++) {
+            for (i32 x = 0; x < grid_size.x; x++) {
+                // const i32 i = (z * grid_size.y * grid_size.x) + (y * grid_size.x) + x;
                 const f32 noise =
                     noise3D((f32)x / grid_size.x, (f32)y / grid_size.y, (f32)z / grid_size.z);
                 if (noise > 0.09f) {
@@ -307,24 +339,24 @@ f32 OVoxelVolume::traverse_brick(const Brick512* brick, const int3& pos, const R
         /* <http://www.cse.yorku.ca/~amana/research/grid.pdf> */
         if (tmax.x < tmax.y) {
             if (tmax.x < tmax.z) {
-                cell.x += step.x;
+                cell.x += (i32)step.x;
                 if (cell.x < 0 || cell.x >= 8) break;
                 axis = 0, t = tmax.x;
                 tmax.x += delta.x;
             } else {
-                cell.z += step.z;
+                cell.z += (i32)step.z;
                 if (cell.z < 0 || cell.z >= 8) break;
                 axis = 2, t = tmax.z;
                 tmax.z += delta.z;
             }
         } else {
             if (tmax.y < tmax.z) {
-                cell.y += step.y;
+                cell.y += (i32)step.y;
                 if (cell.y < 0 || cell.y >= 8) break;
                 axis = 1, t = tmax.y;
                 tmax.y += delta.y;
             } else {
-                cell.z += step.z;
+                cell.z += (i32)step.z;
                 if (cell.z < 0 || cell.z >= 8) break;
                 axis = 2, t = tmax.z;
                 tmax.z += delta.z;
@@ -414,7 +446,7 @@ static f32 safe_entry(const f32 ro, const f32 rd, const f32 min, const f32 max) 
     return fmaxf(0, tmin);
 }
 
-PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debug) const {
+PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool) const {
     PacketHit8x8 hit;
 
     /* Grab the 4 corner rays */
@@ -432,22 +464,22 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
     const u32 v = ~(k | u) & 0b11;
 
     /* Bounding box min & max on major axis K */
-    const f32 k_sign = -getsign(ray_tl[k]);
+    const f32 k_sign = (f32)-getsign(ray_tl[k]);
     const f32 k_min = 0, k_max = bb.size[k] - upv;  // TODO: make sure these are correct!
 
     /* Compute entry time of the corner rays along major axis K */
-    const f32 entry_t = safe_entry(origin[k], ray_tl[k], k_min, k_max);
+    const f32 entry_kt = safe_entry(origin[k], ray_tl[k], k_min, k_max);
 
     /* Entry time along major axis K (floor + 0.5 is to align k_t to the grid) */
-    f32 k_t = floorf((origin[k] + ray_tl[k] * entry_t) * vpu + 0.001f);
+    f32 k_t = floorf((origin[k] + ray_tl[k] * entry_kt) * vpu + 0.001f);
     const f32 k_o = (k_t - origin[k] * vpu) * k_sign;
 
-    if (debug) {
-        db::draw_line(origin, origin + packet.rays[0].dir * 5.5f, 0xFFFF0000);
-        db::draw_line(origin, origin + packet.rays[63].dir * 5.5f, 0xFFFF0000);
-        db::draw_line(origin, origin + packet.rays[7].dir * 5.5f, 0xFFFF0000);
-        db::draw_line(origin, origin + packet.rays[56].dir * 5.5f, 0xFFFF0000);
-    }
+    // if (debug) {
+    //     db::draw_line(origin, origin + packet.rays[0].dir * 5.5f, 0xFFFF0000);
+    //     db::draw_line(origin, origin + packet.rays[63].dir * 5.5f, 0xFFFF0000);
+    //     db::draw_line(origin, origin + packet.rays[7].dir * 5.5f, 0xFFFF0000);
+    //     db::draw_line(origin, origin + packet.rays[56].dir * 5.5f, 0xFFFF0000);
+    // }
 
     /* [du_min, du_max, dv_min, dv_max] */
     /* Factor by which the slice grows each step. */
@@ -502,14 +534,14 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
     u_max = fmaxf(fmaxf(u_a, u_b), fmaxf(u_c, u_d));
     v_max = fmaxf(fmaxf(v_a, v_b), fmaxf(v_c, v_d));
 
-    if (debug) {
-        float3 min_p, max_p;
-        min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
-        max_p[k] = k_t + 1, max_p[u] = u_max, max_p[v] = v_max;
+    // if (debug) {
+    //     float3 min_p, max_p;
+    //     min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
+    //     max_p[k] = k_t + 1, max_p[u] = u_max, max_p[v] = v_max;
 
-        /* Draw floating point grid slice */
-        db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
-    }
+    //    /* Draw floating point grid slice */
+    //    db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
+    //}
 
     /* Time to trace! */
     const f32 min_t = k_min * vpu;
@@ -551,20 +583,20 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
         const i32 x_max = min(grid_size[u] - 1, islice.m128i_i32[1]);
 
         /* DEBUG: draw the grid slice */
-        if (debug) {
-            float3 min_p, max_p;
-            min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
-            max_p[k] = k_t + 1, max_p[u] = u_max, max_p[v] = v_max;
+        // if (debug) {
+        //     float3 min_p, max_p;
+        //     min_p[k] = k_t, min_p[u] = u_min, min_p[v] = v_min;
+        //     max_p[k] = k_t + 1, max_p[u] = u_max, max_p[v] = v_max;
 
-            /* Draw floating point grid slice */
-            db::draw_aabb(min_p * upv, max_p * upv, 0xFF0000FF);
+        //    /* Draw floating point grid slice */
+        //    db::draw_aabb(min_p * upv, max_p * upv, 0xFF0000FF);
 
-            min_p[k] = k_t, min_p[u] = x_min, min_p[v] = y_min;
-            max_p[k] = k_t + 1, max_p[u] = x_max + 1, max_p[v] = y_max + 1;
+        //    min_p[k] = k_t, min_p[u] = x_min, min_p[v] = y_min;
+        //    max_p[k] = k_t + 1, max_p[u] = x_max + 1, max_p[v] = y_max + 1;
 
-            /* Draw grid slice */
-            db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
-        }
+        //    /* Draw grid slice */
+        //    db::draw_aabb(min_p * upv, max_p * upv, 0xFF00FF00);
+        //}
 
         /* Skip any slice 100% outside the grid */
         if (u_max < 0.0f || v_max < 0.0f) continue;
@@ -575,7 +607,7 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
         for (i32 y = y_min; y <= y_max; y++) {
             for (i32 x = x_min; x <= x_max; x++) {
                 int3 i; /* Cell coordinate */
-                i[k] = k_t, i[u] = x, i[v] = y;
+                i[k] = (i32)k_t, i[u] = x, i[v] = y;
 
                 if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
                     is_empty = false;
@@ -588,43 +620,43 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
         /* Skip empty slice */
         if (is_empty) continue;
 
-        // TODO: this doesn't really work...
-        /* Faster logic for saturated slice */
-        //if (is_saturated) {
-        //    const float3 grid_o = origin * vpu;
-        //    bool done = true;
-        //    for (u32 r = 0; r < 8 * 8; r++) {
-        //        const float3 rd = rays.rays[r].dir;
-        //        const float3 ird = rays.rays[r].r_dir;
+            // TODO: this doesn't really work...
+            /* Faster logic for saturated slice */
+            // if (is_saturated) {
+            //     const float3 grid_o = origin * vpu;
+            //     bool done = true;
+            //     for (u32 r = 0; r < 8 * 8; r++) {
+            //         const float3 rd = rays.rays[r].dir;
+            //         const float3 ird = rays.rays[r].r_dir;
 
-        //        /* Entry point */
-        //        const f32 entry_k = k_t - fminf(k_sign, 0.0f);
-        //        const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.001f;
-        //        if (entry_t * upv > hit.hits[r].depth) continue;
+            //        /* Entry point */
+            //        const f32 entry_k = k_t - fminf(k_sign, 0.0f);
+            //        const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.001f;
+            //        if (entry_t * upv > hit.hits[r].depth) continue;
 
-        //        float3 entry_p = grid_o + rd * entry_t;
-        //        int3 i = floori(entry_p);
+            //        float3 entry_p = grid_o + rd * entry_t;
+            //        int3 i = floori(entry_p);
 
-        //        if (i[u] < x_min || i[u] > x_max || i[v] < y_min || i[v] > y_max) {
-        //            done = false;
-        //            continue;
-        //        }
+            //        if (i[u] < x_min || i[u] > x_max || i[v] < y_min || i[v] > y_max) {
+            //            done = false;
+            //            continue;
+            //        }
 
-        //        hit.hits[r].depth = entry_t * upv;
-        //        /* Normal */
-        //        hit.hits[r].normal = 0, hit.hits[r].normal[k] = -rays.rays[r].sign_dir[k];
-        //        hit.hits[r].material =
-        //            voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x];
-        //        hit.hits[r].albedo = RGB8_to_RGBF32(palette[hit.hits[r].material]);
-        //    }
+            //        hit.hits[r].depth = entry_t * upv;
+            //        /* Normal */
+            //        hit.hits[r].normal = 0, hit.hits[r].normal[k] = -rays.rays[r].sign_dir[k];
+            //        hit.hits[r].material =
+            //            voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x];
+            //        hit.hits[r].albedo = RGB8_to_RGBF32(palette[hit.hits[r].material]);
+            //    }
 
-        //    /* Early exit if all rays are done */
-        //    if (done) {
-        //        break;
-        //    }
+            //    /* Early exit if all rays are done */
+            //    if (done) {
+            //        break;
+            //    }
 
-        //    continue;
-        //}
+            //    continue;
+            //}
 
             /* Iterate over cells in slice */
 #if 1
@@ -632,17 +664,17 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
             for (i32 x = x_min; x <= x_max;
                  x++) {  // TODO: VERY LARGE VALUES HERE!!! CAUSING PROBLEMS!
                 int3 i;  /* Cell coordinate */
-                i[k] = k_t, i[u] = x, i[v] = y;
+                i[k] = (i32)k_t, i[u] = x, i[v] = y;
 
                 /* If the cell is a solid voxel */
                 if (voxels[i.z * grid_size.y * grid_size.x + i.y * grid_size.x + i.x]) {
                     /* Find which rays intersect this voxel */
                     const float3 grid_o = origin * vpu;
-                    u32 inactive_rays = 0;
+                    // u32 inactive_rays = 0;
                     for (u32 r = 0; r < 8 * 8; r++) {
                         const float3 rd = rays.rays[r].dir;
                         const float3 ird = rays.rays[r].r_dir;
-                        
+
                         /* Entry point */
                         const f32 entry_k = k_t - fminf(k_sign, 0.0f);
                         const f32 entry_t = entry(grid_o[k], rd[k], entry_k, entry_k) + 0.001f;
@@ -653,8 +685,8 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
 
                         /* DDA */
                         const int3 step =
-                            int3(rays.rays[r].sign_dir.x, rays.rays[r].sign_dir.y,
-                                 rays.rays[r].sign_dir.z);
+                            int3((i32)rays.rays[r].sign_dir.x, (i32)rays.rays[r].sign_dir.y,
+                                 (i32)rays.rays[r].sign_dir.z);
                         const float3 pos_step = fmaxf(step, 0);
                         const float3 delta = fabs(ird);
                         float3 tmax = ((float3(entry_c) - entry_p) + pos_step) * ird;
@@ -672,7 +704,7 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
                             if (entry_c[u] == i[u] && entry_c[v] == i[v]) {
                                 hit.hits[r].depth = (entry_t + inner_t) * upv;
                                 /* Normal */
-                                hit.hits[r].normal = 0, hit.hits[r].normal[axis] = -step[axis];
+                                hit.hits[r].normal = 0, hit.hits[r].normal[axis] = (f32)-step[axis];
                                 hit.hits[r].material = voxels[i.z * grid_size.y * grid_size.x +
                                                               i.y * grid_size.x + i.x];
                                 hit.hits[r].albedo = RGB8_to_RGBF32(palette[hit.hits[r].material]);
@@ -704,31 +736,31 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
                             }
                         }
 
-                        //if (hit.hits[r].depth != BIG_F32) {
-                        //    inactive_rays++;
-                        //}
+                        // if (hit.hits[r].depth != BIG_F32) {
+                        //     inactive_rays++;
+                        // }
                     }
 
                     /* Early exit if all rays are done */
-                    //if (inactive_rays == (8 * 8)) {
-                    //    goto done;
-                    //}
+                    // if (inactive_rays == (8 * 8)) {
+                    //     goto done;
+                    // }
                 }
             }
         }
 
-         u32 inactive_rays = 0;
-         for (u32 r = 0; r < 8 * 8; r++) {
-             /* Only check active rays */
-             if (hit.hits[r].depth != BIG_F32) {
-                 inactive_rays++;
-             }
-         }
+        u32 inactive_rays = 0;
+        for (u32 r = 0; r < 8 * 8; r++) {
+            /* Only check active rays */
+            if (hit.hits[r].depth != BIG_F32) {
+                inactive_rays++;
+            }
+        }
 
         /* Early exit if all rays are done */
-         if (inactive_rays == (8 * 8)) {
-             break;
-         }
+        if (inactive_rays == (8 * 8)) {
+            break;
+        }
 #else
         const float3 grid_o = origin * vpu;
         for (u32 r = 0; r < 8 * 8; r++) {
@@ -814,7 +846,7 @@ PacketHit8x8 OVoxelVolume::intersect(const RayPacket8x8& packet, const bool debu
 #endif
     }
 
-done:
+    // done:
 
     /* Finalize the normals */
     for (u32 r = 0; r < 8 * 8; r++) {
@@ -835,4 +867,8 @@ done:
     //}
 
     return hit;
+}
+
+float3 OVoxelVolume::to_grid(const float3& pos) const {
+    return TransformPosition(pos, bb.imodel) * vpu;
 }
