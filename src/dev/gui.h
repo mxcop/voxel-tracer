@@ -17,7 +17,7 @@ extern void devgui_control();
 /**
  * @brief DOES NOTHING IF "DEV" IS UNDEFINED.
  */
-inline void devgui_stats(const f32 dt){};
+inline void devgui_stats(const f32){};
 
 /**
  * @brief DOES NOTHING IF "DEV" IS UNDEFINED.

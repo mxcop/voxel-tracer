@@ -14,7 +14,7 @@ class Enemy {
     Enemy() = delete;
     Enemy(OVoxelVolume* model);
 
-    void tick(const f32 dt, const float3& player, Enemy** enemies, const u32 enemies_len);
+    bool tick(const f32 dt, const float3& player, Enemy** enemies, const u32 enemies_len);
 
-    void process_hit(const Ray& laser);
+    bool process_hit(const Ray& laser);
 };

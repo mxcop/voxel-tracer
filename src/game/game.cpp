@@ -26,13 +26,13 @@ void Game::init() {
  * ===== Game Tick / Update =====
  */
 void Game::tick(const f32 dt) {
-    if (state == GameState::MENU) {
-    //    renderer->camera.pos = {-1.86f, 1.455f, 2.69f};
-    //    renderer->camera.target = {-1.096f, 1.1667f, 2.1135f};
-    //    renderer->camera.tick();
+    if (state == GameState::MENU || state == GameState::GAMEOVER) {
+        renderer->camera.pos = {-1.86f, 1.455f, 2.69f};
+        renderer->camera.target = {-1.096f, 1.1667f, 2.1135f};
+        renderer->camera.tick();
 
-    //    renderer->scene.tick(dt);
-    //    renderer->tick(screen, dt);
+        renderer->scene.tick(dt);
+        renderer->tick(screen, dt);
 
         EnableCursor();
         return;
@@ -40,7 +40,9 @@ void Game::tick(const f32 dt) {
 
     /* Update enemies */
     for (u32 i = 0; i < 4; i++) {
-        // enemies[i]->tick(dt, renderer->camera.pos, &enemies[0], 4);
+        if (enemies[i]->tick(dt, renderer->camera.pos, &enemies[0], 4)) {
+            state = GameState::GAMEOVER;
+        }
     }
 
     /* Update the camera */
@@ -71,14 +73,14 @@ void Game::tick(const f32 dt) {
         renderer->path(Ray(renderer->camera.pos - float3(0, 0.1f, 0),
                            normalize(renderer->camera.target - renderer->camera.pos)));
 
-    //for (u32 i = 0; i < 8; i++) {
-    //    if (i < laser_path.size() - 1) {
-    //        const float3 a = laser_path[i];
-    //        const float3 b = laser_path[i + 1];
-    //        renderer->scene.laser_segments[i].a = a;
-    //        renderer->scene.laser_segments[i].b = b;
-    //    }
-    //}
+    for (u32 i = 0; i < 8; i++) {
+        if (i < laser_path.size() - 1) {
+            const float3 a = laser_path[i];
+            const float3 b = laser_path[i + 1];
+            renderer->scene.laser_segments[i].a = a;
+            renderer->scene.laser_segments[i].b = b;
+        }
+    }
 
     const float3 last_point = laser_path[laser_path.size() - 1];
     const float3 second_last_point = laser_path[laser_path.size() - 2];
@@ -86,7 +88,9 @@ void Game::tick(const f32 dt) {
     const Ray laser_ray = Ray(second_last_point, laser_dir);
     
     for (u32 i = 0; i < 4; i++) {
-        enemies[i]->process_hit(laser_ray);
+        if (enemies[i]->process_hit(laser_ray)) {
+            score += 100;
+        }
     }
 
     renderer->scene.tick(dt);
@@ -100,27 +104,86 @@ void Game::gui(const f32 dt) {
     /* Development GUI */
     devgui_stats(dt);
 
-    if (state == GameState::MENU) {
-        /* Window composition */
-        float menu_width = centered_overlay();
-        const ImVec2 BUTTON_SIZE = ImVec2(menu_width * 0.5f, 32.0f);
+    switch (state) {
+        case GameState::MENU: {
+            /* Window composition */
+            float menu_width = centered_overlay();
+            const ImVec2 BUTTON_SIZE = ImVec2(menu_width * 0.5f, 32.0f);
 
-        /* Draw content */
-        if (ImGui::Begin("Menu", nullptr, overlay_flags)) {
-            centered_text("Main Menu");
-            ImGui::Separator();
+            /* Draw content */
+            if (ImGui::Begin("Menu", nullptr, overlay_flags)) {
+                centered_text("Main Menu");
+                ImGui::Separator();
 
-            if (aligned_button_h("Play", 0.5f, BUTTON_SIZE)) {
-                state = GameState::GAME;
+                if (aligned_button_h("Play", 0.5f, BUTTON_SIZE)) {
+                    state = GameState::GAME;
+                    score = 0;
+                    DisableCursor();
+                }
+                if (aligned_button_h("Quit", 0.5f, BUTTON_SIZE)) {
+                    running = false;
+                }
             }
-            if (aligned_button_h("Quit", 0.5f, BUTTON_SIZE)) {
-                running = false;
-            }
+            ImGui::End();
+
+            break;
         }
-        ImGui::End();
-        return;
+        case GameState::GAME: {
+            /* Window composition */
+            centered_score();
+
+            /* Draw content */
+            if (ImGui::Begin("Score", nullptr, overlay_flags)) {
+                centered_text("Score: %i", score);
+            }
+            ImGui::End();
+
+            /* Escape logic */
+            static bool escape_down = false;
+            if (IsKeyDown(GLFW_KEY_ESCAPE) && !escape_down) {
+                if (escaped) {
+                    running = false;
+                } else {
+                    escaped = true;
+                    EnableCursor();
+                }
+                escape_down = true;
+            }
+            if (!IsKeyDown(GLFW_KEY_ESCAPE) && escape_down) {
+                escape_down = false;
+            }
+
+            break;
+        }
+        case GameState::GAMEOVER: {
+            /* Window composition */
+            float menu_width = centered_overlay();
+            const ImVec2 BUTTON_SIZE = ImVec2(menu_width * 0.5f, 32.0f);
+
+            /* Draw content */
+            if (ImGui::Begin("Menu", nullptr, overlay_flags)) {
+                centered_text("Game Over");
+                ImGui::Separator();
+
+                centered_text("Score: %i", score);
+
+                if (aligned_button_h("Try again", 0.5f, BUTTON_SIZE)) {
+                    state = GameState::GAME;
+                    score = 0;
+                    DisableCursor();
+                }
+                if (aligned_button_h("Quit", 0.5f, BUTTON_SIZE)) {
+                    running = false;
+                }
+            }
+            ImGui::End();
+
+            break;
+        }
+        default:
+            break;
     }
-    
+
     /* Development GUI */
     devgui_control();
 
@@ -149,21 +212,6 @@ void Game::gui(const f32 dt) {
         tilde_down = false;
     }
 #endif
-
-    /* Escape logic */
-    static bool escape_down = false;
-    if (IsKeyDown(GLFW_KEY_ESCAPE) && !escape_down) {
-        if (escaped) {
-            running = false;
-        } else {
-            escaped = true;
-            EnableCursor();
-        }
-        escape_down = true;
-    }
-    if (!IsKeyDown(GLFW_KEY_ESCAPE) && escape_down) {
-        escape_down = false;
-    }
 
     renderer->gui(running, dt);
 }
@@ -202,8 +250,10 @@ void Game::MouseDown(int button) {
         }
 #endif
 
-        mouse_old = mouse_pos, escaped = false;
-        DisableCursor();
-        return;
+        if (button == 0) {
+            mouse_old = mouse_pos, escaped = false;
+            DisableCursor();
+            return;
+        }
     }
 }

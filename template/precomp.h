@@ -108,10 +108,12 @@ using namespace std;
 #define CHECK_RESULT
 #endif
 
+#ifndef UNIT_TESTING
 // imgui
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#endif
 
 // template headers
 #include "surface.h"
@@ -122,6 +124,7 @@ using namespace Tmpl8;
 // math classes
 #include "tmpl8math.h"
 
+#ifndef UNIT_TESTING
 // OpenCL headers
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS // safe; see https://stackoverflow.com/a/28500846
 #include "cl/cl.h"
@@ -141,6 +144,7 @@ using namespace Tmpl8;
 // opencl & opencl
 #include "opencl.h"
 #include "opengl.h"
+#endif
 
 // fatal error reporting (with a pretty window)
 #define FATALERROR( fmt, ... ) FatalError( "Error on line %d of %s: " fmt "\n", __LINE__, __FILE__, ##__VA_ARGS__ )
@@ -168,6 +172,7 @@ struct Timer
 	chrono::high_resolution_clock::time_point start;
 };
 
+#ifndef UNIT_TESTING
 // Nils's jobmanager
 class Job
 {
@@ -389,6 +394,7 @@ class DummyApp : public TheApp
 public:
 	void Tick() {}
 };
+#endif
 
 #include "game/game.h"
 

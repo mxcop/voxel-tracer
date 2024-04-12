@@ -19,6 +19,13 @@ void eval_material(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scen
     /* Intersection point */
     const float3 i = ray.intersection(hit);
 
+    /* Laser HACK */
+    if (hit.material == 0xFF) {
+        eval.albedo = hit.albedo;
+        eval.irradiance = 1; 
+        return;
+    }
+
     /* Get the hit material row */
     const MaterialRow material = (MaterialRow)floor((hit.material - 1) / 8.0f);
 
@@ -29,10 +36,13 @@ void eval_material(MatEval& eval, const Ray& ray, const HitInfo& hit, const Scen
         case MaterialRow::MIRROR:
             eval_mirror(eval, ray, hit, scene, noise);
             break;
+        case MaterialRow::NOT_LIT:
+            eval.albedo = hit.albedo;
+            eval.irradiance = 1; 
+            break;
         default: /* Diffuse */
             eval.albedo = hit.albedo;
             eval.irradiance = diffuse_light(i, hit.normal, scene, noise);
-            if (ray.debug) db::draw_normal(i, hit.normal, 0xFF0000FF);
             break;
     }
 }

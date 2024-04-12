@@ -14,7 +14,7 @@ Ray debug_ray;
 RayPacket8x8 debug_packet;
 Pyramid debug_py;
 
-DisplayMode display_mode = PRIMARY_STEPS;
+DisplayMode display_mode = FINAL;
 
 /**
  * @brief Display development display modes.

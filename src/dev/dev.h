@@ -55,7 +55,7 @@ extern bool display_modes(const HitInfo& hit, TraceResult& r);
 /**
  * @brief DOES NOTHING IF "DEV" IS UNDEFINED.
  */
-inline bool display_modes(const HitInfo& hit) { return false; };
+inline bool display_modes(const HitInfo&) { return false; };
 
 #endif
 

@@ -20,6 +20,7 @@ class Game : public TheApp {
     Enemy* enemies[4];
 
     GameState state = GameState::MENU;
+    u32 score = 0;
 
    public:
     /* Ray tracer */

@@ -32,23 +32,23 @@ extern void draw_obb(const float3& point, const float3& size, const quat& rot,
 /**
  * @brief DOES NOTHING IF "DEV" IS UNDEFINED.
  */
-inline void draw_line(const float3& a, const float3& b, const u32 c = DEFAULT_COLOR){};
+inline void draw_line(const float3&, const float3&, const u32){};
 
 /**
  * @brief DOES NOTHING IF "DEV" IS UNDEFINED.
  */
-inline void draw_normal(const float3& point, const float3& n, const u32 c = DEFAULT_COLOR){};
+inline void draw_normal(const float3&, const float3&, const u32){};
 
 /**
  * @brief DOES NOTHING IF "DEV" IS UNDEFINED.
  */
-inline void draw_aabb(const float3& min, const float3& max, const u32 c = DEFAULT_COLOR){};
+inline void draw_aabb(const float3&, const float3&, const u32){};
 
 /**
  * @brief DOES NOTHING IF "DEV" IS UNDEFINED.
  */
-inline void draw_obb(const float3& point, const float3& size, const quat& rot,
-                     const u32 c = DEFAULT_COLOR){};
+inline void draw_obb(const float3&, const float3&, const quat&,
+                     const u32){};
 
 #endif
 

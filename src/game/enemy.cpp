@@ -7,7 +7,7 @@ constexpr f32 ENEMY_WEIGHT = 2.0f;
 
 Enemy::Enemy(OVoxelVolume* model) : model(model) { pos = RandomFloat3() * 32.0f - 16.0f; }
 
-void Enemy::tick(const f32 dt, const float3& player, Enemy** enemies, const u32 enemies_len) {
+bool Enemy::tick(const f32 dt, const float3& player, Enemy** enemies, const u32 enemies_len) {
     /* Target the player */
     float3 target_dir = normalize(player - pos) * PLAYER_WEIGHT;
 
@@ -29,19 +29,22 @@ void Enemy::tick(const f32 dt, const float3& player, Enemy** enemies, const u32 
 
     /* Look towards the player */
     const float3 look_dir = normalize(velocity);
-    // pitch = asin(-look_dir.y);
     yaw = atan2(look_dir.x, look_dir.z);
     quat new_rot = quat::from_axis_angle({0, 1, 0}, yaw);
-    // new_rot = new_rot * quat::from_axis_angle({1, 0, 0}, pitch);
 
     /* Update the model */
     model->set_position(pos);
     model->set_rotation(new_rot);
+
+    if (length(player - pos) < 1.0f) {
+        return true;
+    }
+    return false;
 }
 
-void Enemy::process_hit(const Ray& laser) {
+bool Enemy::process_hit(const Ray& laser) {
     const HitInfo hit = model->intersect(laser);
-    if (hit.no_hit()) return;
+    if (hit.no_hit()) return false;
 
     /* Laser hit */
     const float3 hit_point = laser.intersection(hit) - hit.normal * 0.001f;
@@ -50,11 +53,13 @@ void Enemy::process_hit(const Ray& laser) {
     health--;
 
     /* Died */
-    //if (health <= 0) {
-    //    pos = RandomFloat3() * 32.0f - 16.0f;
-    //    velocity = 0;
-    //    health = 32;
+    if (health <= 0) {
+        pos = RandomFloat3() * 32.0f - 16.0f;
+        velocity = 0;
+        health = 32;
 
-    //    model->reload_model("assets/vox/enemy-drone.vox");
-    //}
+        model->reload_model("assets/vox/enemy-drone.vox");
+        return true;
+    }
+    return false;
 }

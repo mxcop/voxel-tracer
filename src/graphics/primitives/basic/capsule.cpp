@@ -63,7 +63,7 @@ HitInfo Capsule::intersect(const Ray& ray) const {
         const float3 point = ray.origin + ray.dir * (t - 0.01f);
         hit.normal = cap_normal(point, a, b, radius);
         hit.albedo = {50, 0, 0};
-        hit.material = 32;
+        hit.material = 0xFF;
     }
 
     return hit;

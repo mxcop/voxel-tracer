@@ -57,8 +57,10 @@ TraceResult Renderer::trace(Ray& ray, const u32 x, const u32 y) const {
     const HitInfo hit = scene.intersect(ray);
     TraceResult result(hit);
 
+#ifdef DEV
     /* Handle special display modes, for debugging */
     if (dev::display_modes(hit, result)) return result;
+#endif
 
     /* Return if we didn't hit a surface (result already has sky albedo) */
     if (hit.no_hit()) return result.no_reproject();
@@ -89,8 +91,10 @@ TraceResult8x8 Renderer::trace(const RayPacket8x8& packet, const u32 x, const u3
         TraceResult& result = results.results[r];
         result = TraceResult(hit);
 
+#ifdef DEV
         /* Handle special display modes, for debugging */
         if (dev::display_modes(hit, result)) continue;
+#endif
 
         /* Return if we didn't hit a surface (result already has sky albedo) */
         if (hit.no_hit()) {
@@ -113,7 +117,7 @@ TraceResult8x8 Renderer::trace(const RayPacket8x8& packet, const u32 x, const u3
     return results;
 }
 
-vector<float3> Renderer::path(const Ray& ray) const { 
+vector<float3> Renderer::path(const Ray& ray) const {
     vector<float3> path;
     path.push_back(ray.origin);
 
@@ -246,8 +250,8 @@ void Renderer::tick(Surface* screen, const f32) {
 
 void Renderer::gui(bool&, const f32) {
     // TODO: remove this
-    trace(dev::debug_ray, 0, 0);
-    db::draw_normal(dev::debug_ray.origin, dev::debug_ray.dir, 0xFFFF0000);
+    // trace(dev::debug_ray, 0, 0);
+    // db::draw_normal(dev::debug_ray.origin, dev::debug_ray.dir, 0xFFFF0000);
     // dev::debug_packet.setup_slice(0, 1, 32);
     // scene.cvv->intersect(dev::debug_packet, true);
     // dev::debug_packet.traverse(0, 1, 32);

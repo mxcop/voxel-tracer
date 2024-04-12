@@ -10,6 +10,7 @@ enum class MaterialRow : u32 {
     MIRROR = 1,   /* ID : 8..16 */
     METAL = 2,    /* ID : 16..24 */
     UNUSED_3 = 3, /* ID : 24..32 */
+    NOT_LIT = 15
 };
 
 struct MatEval {
