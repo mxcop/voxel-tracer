@@ -5,11 +5,17 @@ You play as a laser drone who has to fend off enemy drones which try to ram you.
 
 ### Controls :
 W - forward
+
 S - backward
+
 A - left
+
 D - right
+
 Shift - down
+
 Space - up
+
 Arrow keys / mouse - looking around
 
 ## License (CC0 & MIT)
