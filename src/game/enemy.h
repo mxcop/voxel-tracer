@@ -14,6 +14,8 @@ class Enemy {
     Enemy() = delete;
     Enemy(OVoxelVolume* model);
 
+    void respawn() { pos = RandomFloat3() * 32.0f - 16.0f; };
+
     bool tick(const f32 dt, const float3& player, Enemy** enemies, const u32 enemies_len);
 
     bool process_hit(const Ray& laser);

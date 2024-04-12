@@ -118,6 +118,9 @@ void Game::gui(const f32 dt) {
                 if (aligned_button_h("Play", 0.5f, BUTTON_SIZE)) {
                     state = GameState::GAME;
                     score = 0;
+                    for (u32 i = 0; i < 4; i++) {
+                        enemies[i]->respawn();
+                    }
                     DisableCursor();
                 }
                 if (aligned_button_h("Quit", 0.5f, BUTTON_SIZE)) {
@@ -170,6 +173,9 @@ void Game::gui(const f32 dt) {
                 if (aligned_button_h("Try again", 0.5f, BUTTON_SIZE)) {
                     state = GameState::GAME;
                     score = 0;
+                    for (u32 i = 0; i < 4; i++) {
+                        enemies[i]->respawn();
+                    }
                     DisableCursor();
                 }
                 if (aligned_button_h("Quit", 0.5f, BUTTON_SIZE)) {
